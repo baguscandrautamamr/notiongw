@@ -6,6 +6,8 @@ import type { Note, NoteSummary, PageType } from "@/lib/types";
 import { descendantIds, positionForIndex } from "@/lib/tree";
 import { defaultDatabase } from "@/lib/db-types";
 import { initOfflineSync, updateNote } from "@/lib/offline-queue";
+import { blocksToPlainText } from "@/lib/blocks-text";
+import type { PartialBlock } from "@blocknote/core";
 import { useTheme } from "@/lib/use-theme";
 import dynamic from "next/dynamic";
 import Sidebar from "@/components/Sidebar";
@@ -323,6 +325,42 @@ export default function Workspace({
     [notes, supabase]
   );
 
+  const handleImportPdf = useCallback(
+    async (title: string, blocks: PartialBlock[]) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const roots = notes.filter((n) => n.parent_id === null);
+      const position =
+        roots.length > 0 ? Math.max(...roots.map((s) => s.position)) + 1 : 0;
+
+      const { data, error } = await supabase
+        .from("notes")
+        .insert({
+          user_id: user.id,
+          title,
+          icon: "📄",
+          type: "document",
+          doc: blocks,
+          content: blocksToPlainText(blocks),
+          parent_id: null,
+          position,
+        })
+        .select(SUMMARY_COLS)
+        .single();
+
+      if (!error && data) {
+        const summary = toSummary(data as Note);
+        setNotes((prev) => [...prev, summary]);
+        setActiveId(summary.id);
+        setSidebarOpen(false);
+      }
+    },
+    [notes, supabase]
+  );
+
   const handleSelect = useCallback((id: string) => {
     setActiveId(id);
     setSidebarOpen(false);
@@ -403,6 +441,7 @@ export default function Workspace({
     onMove: handleMove,
     onToggleFavorite: handleToggleFavorite,
     onDuplicate: handleDuplicate,
+    onImportPdf: handleImportPdf,
     onToggleExpand: toggleExpand,
     onToggleTheme: toggle,
     onCloseMobile: () => setSidebarOpen(false),

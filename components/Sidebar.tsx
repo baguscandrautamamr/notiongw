@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { NoteSummary, PageType } from "@/lib/types";
 import type { MoveMode } from "@/components/Workspace";
+import type { PartialBlock } from "@blocknote/core";
 import { pendingCount, subscribePending } from "@/lib/offline-queue";
 import NotificationBell from "@/components/NotificationBell";
 import PageTree from "@/components/PageTree";
 import NewPageButton from "@/components/NewPageButton";
+import ImportPdfButton from "@/components/ImportPdfButton";
 
 export default function Sidebar({
   notes,
@@ -22,6 +24,7 @@ export default function Sidebar({
   onMove,
   onToggleFavorite,
   onDuplicate,
+  onImportPdf,
   onToggleExpand,
   onToggleTheme,
   onCloseMobile,
@@ -39,6 +42,7 @@ export default function Sidebar({
   onMove: (dragId: string, targetId: string, mode: MoveMode) => void;
   onToggleFavorite: (id: string) => void;
   onDuplicate: (id: string) => void;
+  onImportPdf: (title: string, blocks: PartialBlock[]) => void | Promise<void>;
   onToggleExpand: (id: string) => void;
   onToggleTheme: () => void;
   onCloseMobile: () => void;
@@ -111,9 +115,10 @@ export default function Sidebar({
         </button>
       </div>
 
-      {/* New page */}
+      {/* New page + import */}
       <div className="px-3 pb-1">
         <NewPageButton onNew={(type) => onNew(null, type)} />
+        <ImportPdfButton onImport={onImportPdf} />
       </div>
 
       {/* Page list / tree */}
