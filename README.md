@@ -8,6 +8,11 @@ Ruang kerja catatan ala **Notion / AppFlowy** (PWA) dengan:
   bisa **di-embed ke dalam dokumen** (ketik `/papan`) dan **export ke PNG**
 - 👤 **Penanggung jawab (assignee)** dengan foto/avatar di database
 - 🌐 **Share halaman via link publik** (baca-saja, tanpa perlu login)
+- ⭐ **Favorit** & 🕒 **Terkini** di sidebar untuk akses cepat
+- 📄 **Impor PDF** → jadi halaman dokumen (ekstraksi teks di browser via
+  pdf.js — tanpa server, jalan di Vercel)
+- ⎘ **Duplikat halaman** (menyalin isi dokumen/database)
+- ⬇ **Ekspor database ke CSV** (mengikuti filter/urutan yang aktif)
 - 🔎 **Pencarian full-text** (judul **dan** isi semua halaman) — tekan `⌘K` / `Ctrl+K`
 - 🗑️ **Sampah (soft-delete)**: halaman yang dihapus bisa **dipulihkan** atau
   dihapus permanen — tidak langsung hilang
@@ -161,6 +166,7 @@ components/
   Sidebar.tsx            # daftar halaman (tree), cari, baru, tema, sampah, keluar
   SearchModal.tsx        # pencarian full-text (judul + isi) via ⌘K
   TrashModal.tsx         # Sampah: pulihkan / hapus permanen
+  ImportPdfButton.tsx    # impor PDF (ekstraksi teks pdf.js di browser)
   PageTree.tsx           # tree halaman + drag & drop (urut / nest)
   NewPageButton.tsx      # menu buat halaman: Dokumen / Grid / Board
   Breadcrumb.tsx         # jejak lokasi halaman

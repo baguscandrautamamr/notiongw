@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { NoteSummary, PageType } from "@/lib/types";
 import type { MoveMode } from "@/components/Workspace";
+import type { PartialBlock } from "@blocknote/core";
 import { pendingCount, subscribePending } from "@/lib/offline-queue";
 import NotificationBell from "@/components/NotificationBell";
 import PageTree from "@/components/PageTree";
 import NewPageButton from "@/components/NewPageButton";
+import ImportPdfButton from "@/components/ImportPdfButton";
 
 export default function Sidebar({
   notes,
@@ -20,6 +22,9 @@ export default function Sidebar({
   onNew,
   onDelete,
   onMove,
+  onToggleFavorite,
+  onDuplicate,
+  onImportPdf,
   onToggleExpand,
   onToggleTheme,
   onCloseMobile,
@@ -35,6 +40,9 @@ export default function Sidebar({
   onNew: (parentId: string | null, type?: PageType) => void;
   onDelete: (id: string) => void;
   onMove: (dragId: string, targetId: string, mode: MoveMode) => void;
+  onToggleFavorite: (id: string) => void;
+  onDuplicate: (id: string) => void;
+  onImportPdf: (title: string, blocks: PartialBlock[]) => void | Promise<void>;
   onToggleExpand: (id: string) => void;
   onToggleTheme: () => void;
   onCloseMobile: () => void;
@@ -55,6 +63,11 @@ export default function Sidebar({
   const matches = q
     ? notes.filter((n) => (n.title || "Tanpa judul").toLowerCase().includes(q))
     : [];
+
+  const favorites = notes.filter((n) => n.is_favorite);
+  const recent = [...notes]
+    .sort((a, b) => (a.updated_at < b.updated_at ? 1 : a.updated_at > b.updated_at ? -1 : 0))
+    .slice(0, 5);
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -102,14 +115,66 @@ export default function Sidebar({
         </button>
       </div>
 
-      {/* New page */}
+      {/* New page + import */}
       <div className="px-3 pb-1">
         <NewPageButton onNew={(type) => onNew(null, type)} />
+        <ImportPdfButton onImport={onImportPdf} />
       </div>
 
       {/* Page list / tree */}
       <nav className="scroll-area min-h-0 flex-1 overflow-y-auto px-2 py-1">
-        <div className="px-1 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+        {/* Favorites & Recent (hidden while filtering) */}
+        {!q && favorites.length > 0 && (
+          <>
+            <div className="px-1 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              ⭐ Favorit
+            </div>
+            <ul className="space-y-0.5">
+              {favorites.map((n) => (
+                <li key={n.id}>
+                  <button
+                    onClick={() => onSelect(n.id)}
+                    className={`flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-sm transition ${
+                      activeId === n.id
+                        ? "bg-brand-50 text-brand-700 dark:bg-slate-800 dark:text-white"
+                        : "text-slate-700 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-800"
+                    }`}
+                  >
+                    <span className="text-base leading-none">{n.icon}</span>
+                    <span className="truncate">{n.title || "Tanpa judul"}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+
+        {!q && recent.length > 0 && (
+          <>
+            <div className="px-1 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              🕒 Terkini
+            </div>
+            <ul className="space-y-0.5">
+              {recent.map((n) => (
+                <li key={n.id}>
+                  <button
+                    onClick={() => onSelect(n.id)}
+                    className={`flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-sm transition ${
+                      activeId === n.id
+                        ? "bg-brand-50 text-brand-700 dark:bg-slate-800 dark:text-white"
+                        : "text-slate-700 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-800"
+                    }`}
+                  >
+                    <span className="text-base leading-none">{n.icon}</span>
+                    <span className="truncate">{n.title || "Tanpa judul"}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+
+        <div className="px-1 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
           {q ? "Hasil pencarian" : "Halaman"}
         </div>
 
@@ -144,6 +209,8 @@ export default function Sidebar({
             onNew={onNew}
             onDelete={onDelete}
             onMove={onMove}
+            onToggleFavorite={onToggleFavorite}
+            onDuplicate={onDuplicate}
             onToggleExpand={onToggleExpand}
           />
         )}

@@ -10,6 +10,7 @@ import {
   defaultDatabase,
 } from "@/lib/db-types";
 import { setView } from "@/lib/db-ops";
+import { databaseToCsv } from "@/lib/csv";
 import EmojiPicker from "@/components/EmojiPicker";
 import Breadcrumb from "@/components/Breadcrumb";
 import ShareButton from "@/components/ShareButton";
@@ -128,6 +129,22 @@ export default function DatabaseView({
     scheduleSave();
   }
 
+  function exportCsv() {
+    const csv = databaseToCsv(dbRef.current);
+    const blob = new Blob(["﻿" + csv], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download =
+      (titleRef.current.trim() || "database").replace(/[^\w-]+/g, "_") + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
   if (loading) {
     return (
       <div className="mx-auto w-full max-w-5xl px-6 py-16">
@@ -238,6 +255,15 @@ export default function DatabaseView({
             </button>
           )}
         </div>
+
+        <div className="flex-1" />
+        <button
+          onClick={exportCsv}
+          className="rounded-lg border border-slate-200 px-2.5 py-1 text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+          title="Ekspor ke CSV"
+        >
+          ⬇ CSV
+        </button>
       </div>
 
       {view === "grid" ? (

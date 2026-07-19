@@ -5,7 +5,9 @@ import { createClient } from "@/lib/supabase/client";
 import type { Note, NoteSummary, PageType } from "@/lib/types";
 import { descendantIds, positionForIndex } from "@/lib/tree";
 import { defaultDatabase } from "@/lib/db-types";
-import { initOfflineSync } from "@/lib/offline-queue";
+import { initOfflineSync, updateNote } from "@/lib/offline-queue";
+import { blocksToPlainText } from "@/lib/blocks-text";
+import type { PartialBlock } from "@blocknote/core";
 import { useTheme } from "@/lib/use-theme";
 import dynamic from "next/dynamic";
 import Sidebar from "@/components/Sidebar";
@@ -16,7 +18,7 @@ import SearchModal from "@/components/SearchModal";
 import TrashModal from "@/components/TrashModal";
 
 const SUMMARY_COLS =
-  "id, title, icon, type, parent_id, position, updated_at" as const;
+  "id, title, icon, type, parent_id, position, updated_at, is_favorite" as const;
 
 function toSummary(row: Note): NoteSummary {
   return {
@@ -27,6 +29,7 @@ function toSummary(row: Note): NoteSummary {
     parent_id: row.parent_id,
     position: row.position,
     updated_at: row.updated_at,
+    is_favorite: row.is_favorite ?? false,
   };
 }
 
@@ -127,11 +130,11 @@ export default function Workspace({
             parent_id: parentId,
             position,
           })
-          .select("id, title, icon, type, parent_id, position, updated_at")
+          .select(SUMMARY_COLS)
           .single();
 
         if (!error && data) {
-          const summary = data as NoteSummary;
+          const summary = toSummary(data as Note);
           setNotes((prev) => [...prev, summary]);
           setActiveId(summary.id);
           if (parentId) {
@@ -163,7 +166,31 @@ export default function Workspace({
         .from("notes")
         .update({ deleted_at: new Date().toISOString() })
         .in("id", [...toRemove]);
-      if (error) setNotes(prev);
+
+      if (!error) return;
+
+      // The `deleted_at` column only exists after the schema migration has
+      // been run. If it's missing, fall back to a permanent delete so the app
+      // still works (FK cascade removes descendants).
+      const missingColumn =
+        error.code === "42703" ||
+        error.code === "PGRST204" ||
+        /deleted_at/i.test(error.message ?? "");
+
+      if (missingColumn) {
+        const { error: delErr } = await supabase
+          .from("notes")
+          .delete()
+          .eq("id", id);
+        if (delErr) {
+          setNotes(prev);
+          alert("Gagal menghapus halaman: " + delErr.message);
+        }
+        return;
+      }
+
+      setNotes(prev);
+      alert("Gagal memindahkan ke Sampah: " + error.message);
     },
     [notes, activeId, supabase]
   );
@@ -230,6 +257,108 @@ export default function Workspace({
       );
     },
     []
+  );
+
+  const handleToggleFavorite = useCallback(
+    async (id: string) => {
+      const current = notes.find((n) => n.id === id);
+      if (!current) return;
+      const next = !current.is_favorite;
+      setNotes((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, is_favorite: next } : n))
+      );
+      const { ok, queued } = await updateNote(supabase, id, {
+        is_favorite: next,
+      });
+      if (!ok && !queued) {
+        // Revert on failure (e.g. is_favorite column not migrated yet).
+        setNotes((prev) =>
+          prev.map((n) => (n.id === id ? { ...n, is_favorite: !next } : n))
+        );
+      }
+    },
+    [notes, supabase]
+  );
+
+  const handleDuplicate = useCallback(
+    async (id: string) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: original } = await supabase
+        .from("notes")
+        .select("title, icon, type, doc, db, cover_url, content, parent_id")
+        .eq("id", id)
+        .single();
+      if (!original) return;
+      const src = original as Partial<Note>;
+
+      const siblings = notes.filter((n) => n.parent_id === (src.parent_id ?? null));
+      const position =
+        siblings.length > 0 ? Math.max(...siblings.map((s) => s.position)) + 1 : 0;
+
+      const { data, error } = await supabase
+        .from("notes")
+        .insert({
+          user_id: user.id,
+          title: (src.title ? src.title + " " : "") + "(salinan)",
+          icon: src.icon ?? "📄",
+          type: src.type ?? "document",
+          doc: src.doc ?? null,
+          db: src.db ?? null,
+          cover_url: src.cover_url ?? null,
+          content: src.content ?? "",
+          parent_id: src.parent_id ?? null,
+          position,
+        })
+        .select(SUMMARY_COLS)
+        .single();
+
+      if (!error && data) {
+        const summary = toSummary(data as Note);
+        setNotes((prev) => [...prev, summary]);
+        setActiveId(summary.id);
+      }
+    },
+    [notes, supabase]
+  );
+
+  const handleImportPdf = useCallback(
+    async (title: string, blocks: PartialBlock[]) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const roots = notes.filter((n) => n.parent_id === null);
+      const position =
+        roots.length > 0 ? Math.max(...roots.map((s) => s.position)) + 1 : 0;
+
+      const { data, error } = await supabase
+        .from("notes")
+        .insert({
+          user_id: user.id,
+          title,
+          icon: "📄",
+          type: "document",
+          doc: blocks,
+          content: blocksToPlainText(blocks),
+          parent_id: null,
+          position,
+        })
+        .select(SUMMARY_COLS)
+        .single();
+
+      if (!error && data) {
+        const summary = toSummary(data as Note);
+        setNotes((prev) => [...prev, summary]);
+        setActiveId(summary.id);
+        setSidebarOpen(false);
+      }
+    },
+    [notes, supabase]
   );
 
   const handleSelect = useCallback((id: string) => {
@@ -310,6 +439,9 @@ export default function Workspace({
     onNew: handleNew,
     onDelete: handleDelete,
     onMove: handleMove,
+    onToggleFavorite: handleToggleFavorite,
+    onDuplicate: handleDuplicate,
+    onImportPdf: handleImportPdf,
     onToggleExpand: toggleExpand,
     onToggleTheme: toggle,
     onCloseMobile: () => setSidebarOpen(false),

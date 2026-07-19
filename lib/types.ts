@@ -12,6 +12,7 @@ export type Note = {
   doc: unknown | null; // BlockNote block array (documents)
   db: unknown | null; // Database (grid/board pages)
   is_public: boolean;
+  is_favorite: boolean;
   content: string | null;
   image_url: string | null;
   deleted_at: string | null;
@@ -22,7 +23,14 @@ export type Note = {
 // Lightweight shape used by the sidebar tree.
 export type NoteSummary = Pick<
   Note,
-  "id" | "title" | "icon" | "type" | "parent_id" | "position" | "updated_at"
+  | "id"
+  | "title"
+  | "icon"
+  | "type"
+  | "parent_id"
+  | "position"
+  | "updated_at"
+  | "is_favorite"
 >;
 
 // A NoteSummary with its resolved children (built client-side).

@@ -15,6 +15,8 @@ export default function PageTree({
   onNew,
   onDelete,
   onMove,
+  onToggleFavorite,
+  onDuplicate,
   onToggleExpand,
 }: {
   notes: NoteSummary[];
@@ -24,6 +26,8 @@ export default function PageTree({
   onNew: (parentId: string | null, type?: import("@/lib/types").PageType) => void;
   onDelete: (id: string) => void;
   onMove: (dragId: string, targetId: string, mode: MoveMode) => void;
+  onToggleFavorite: (id: string) => void;
+  onDuplicate: (id: string) => void;
   onToggleExpand: (id: string) => void;
 }) {
   const [dragId, setDragId] = useState<string | null>(null);
@@ -116,6 +120,20 @@ export default function PageTree({
             <span className="truncate">{node.title || "Tanpa judul"}</span>
           </button>
 
+          {/* favorite star — always visible when active, else on hover */}
+          <button
+            onClick={() => onToggleFavorite(node.id)}
+            className={`shrink-0 rounded p-1 transition hover:bg-slate-300/50 group-hover:opacity-100 dark:hover:bg-slate-700 ${
+              node.is_favorite
+                ? "text-amber-400 opacity-100"
+                : "text-slate-400 opacity-0"
+            }`}
+            title={node.is_favorite ? "Hapus dari favorit" : "Tandai favorit"}
+            aria-label="Favorit"
+          >
+            {node.is_favorite ? "★" : "☆"}
+          </button>
+
           {/* hover actions */}
           <button
             onClick={() => onNew(node.id)}
@@ -124,6 +142,14 @@ export default function PageTree({
             aria-label="Sub-halaman baru"
           >
             ＋
+          </button>
+          <button
+            onClick={() => onDuplicate(node.id)}
+            className="shrink-0 rounded p-1 text-slate-400 opacity-0 transition hover:bg-slate-300/50 hover:text-slate-700 group-hover:opacity-100 dark:hover:bg-slate-700 dark:hover:text-white"
+            title="Duplikat halaman"
+            aria-label="Duplikat halaman"
+          >
+            ⎘
           </button>
           <button
             onClick={() => onDelete(node.id)}
