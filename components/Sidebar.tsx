@@ -4,26 +4,34 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { NoteSummary } from "@/lib/types";
+import type { MoveMode } from "@/components/Workspace";
 import NotificationBell from "@/components/NotificationBell";
+import PageTree from "@/components/PageTree";
 
 export default function Sidebar({
   notes,
   activeId,
+  expanded,
   userEmail,
   theme,
   onSelect,
   onNew,
   onDelete,
+  onMove,
+  onToggleExpand,
   onToggleTheme,
   onCloseMobile,
 }: {
   notes: NoteSummary[];
   activeId: string | null;
+  expanded: Set<string>;
   userEmail: string;
   theme: "light" | "dark";
   onSelect: (id: string) => void;
-  onNew: () => void;
+  onNew: (parentId: string | null) => void;
   onDelete: (id: string) => void;
+  onMove: (dragId: string, targetId: string, mode: MoveMode) => void;
+  onToggleExpand: (id: string) => void;
   onToggleTheme: () => void;
   onCloseMobile: () => void;
 }) {
@@ -31,9 +39,10 @@ export default function Sidebar({
   const supabase = createClient();
   const [query, setQuery] = useState("");
 
-  const filtered = notes.filter((n) =>
-    (n.title || "Tanpa judul").toLowerCase().includes(query.trim().toLowerCase())
-  );
+  const q = query.trim().toLowerCase();
+  const matches = q
+    ? notes.filter((n) => (n.title || "Tanpa judul").toLowerCase().includes(q))
+    : [];
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -74,52 +83,52 @@ export default function Sidebar({
       {/* New page */}
       <div className="px-3 pb-1">
         <button
-          onClick={onNew}
+          onClick={() => onNew(null)}
           className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-800"
         >
           <span className="text-base">＋</span> Halaman baru
         </button>
       </div>
 
-      {/* Page list */}
+      {/* Page list / tree */}
       <nav className="scroll-area min-h-0 flex-1 overflow-y-auto px-2 py-1">
         <div className="px-1 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-          Halaman
+          {q ? "Hasil pencarian" : "Halaman"}
         </div>
-        {filtered.length === 0 ? (
-          <p className="px-2 py-2 text-xs text-slate-400">
-            {notes.length === 0 ? "Belum ada halaman." : "Tidak ada yang cocok."}
-          </p>
-        ) : (
-          <ul className="space-y-0.5">
-            {filtered.map((n) => (
-              <li key={n.id}>
-                <div
-                  className={`group flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition ${
-                    activeId === n.id
-                      ? "bg-brand-50 text-brand-700 dark:bg-slate-800 dark:text-white"
-                      : "text-slate-700 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-800"
-                  }`}
-                >
+
+        {q ? (
+          matches.length === 0 ? (
+            <p className="px-2 py-2 text-xs text-slate-400">Tidak ada yang cocok.</p>
+          ) : (
+            <ul className="space-y-0.5">
+              {matches.map((n) => (
+                <li key={n.id}>
                   <button
                     onClick={() => onSelect(n.id)}
-                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                    className={`flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-sm transition ${
+                      activeId === n.id
+                        ? "bg-brand-50 text-brand-700 dark:bg-slate-800 dark:text-white"
+                        : "text-slate-700 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-800"
+                    }`}
                   >
                     <span className="text-base leading-none">{n.icon}</span>
                     <span className="truncate">{n.title || "Tanpa judul"}</span>
                   </button>
-                  <button
-                    onClick={() => onDelete(n.id)}
-                    className="rounded p-0.5 text-slate-400 opacity-0 transition hover:text-red-500 group-hover:opacity-100"
-                    aria-label="Hapus halaman"
-                    title="Hapus"
-                  >
-                    🗑️
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
+          )
+        ) : (
+          <PageTree
+            notes={notes}
+            activeId={activeId}
+            expanded={expanded}
+            onSelect={onSelect}
+            onNew={onNew}
+            onDelete={onDelete}
+            onMove={onMove}
+            onToggleExpand={onToggleExpand}
+          />
         )}
       </nav>
 

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { Block, PartialBlock } from "@blocknote/core";
 import { createClient } from "@/lib/supabase/client";
+import { uploadImage } from "@/lib/cloudinary";
 import type { Note, NoteSummary } from "@/lib/types";
 import EmojiPicker from "@/components/EmojiPicker";
 
@@ -24,10 +25,12 @@ export default function Editor({
   noteId,
   theme,
   onMetaChange,
+  onCreateSubpage,
 }: {
   noteId: string;
   theme: "light" | "dark";
   onMetaChange: (meta: Pick<NoteSummary, "id" | "title" | "icon">) => void;
+  onCreateSubpage: (parentId: string) => void;
 }) {
   const supabase = createClient();
 
@@ -35,13 +38,15 @@ export default function Editor({
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
   const [icon, setIcon] = useState("📄");
+  const [cover, setCover] = useState<string | null>(null);
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [coverBusy, setCoverBusy] = useState(false);
 
   const docRef = useRef<Block[] | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const coverInput = useRef<HTMLInputElement>(null);
 
-  // Load the full note when the selected id changes.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -57,6 +62,7 @@ export default function Editor({
       setNote(n);
       setTitle(n?.title ?? "");
       setIcon(n?.icon ?? "📄");
+      setCover(n?.cover_url ?? null);
       setLoading(false);
     })();
     return () => {
@@ -65,32 +71,37 @@ export default function Editor({
     };
   }, [noteId, supabase]);
 
-  const persist = useCallback(async () => {
-    setStatus("saving");
-    const payload: Record<string, unknown> = {
-      title: title.trim(),
-      icon,
-      updated_at: new Date().toISOString(),
-    };
-    if (docRef.current) payload.doc = docRef.current;
+  const persist = useCallback(
+    async (overrides?: Record<string, unknown>) => {
+      setStatus("saving");
+      const payload: Record<string, unknown> = {
+        title: title.trim(),
+        icon,
+        cover_url: cover,
+        updated_at: new Date().toISOString(),
+        ...overrides,
+      };
+      if (docRef.current) payload.doc = docRef.current;
 
-    const { error } = await supabase
-      .from("notes")
-      .update(payload)
-      .eq("id", noteId);
+      const { error } = await supabase
+        .from("notes")
+        .update(payload)
+        .eq("id", noteId);
 
-    if (!error) {
-      setStatus("saved");
-      onMetaChange({ id: noteId, title: title.trim(), icon });
-      setTimeout(() => setStatus("idle"), 1500);
-    } else {
-      setStatus("idle");
-    }
-  }, [title, icon, noteId, supabase, onMetaChange]);
+      if (!error) {
+        setStatus("saved");
+        onMetaChange({ id: noteId, title: title.trim(), icon });
+        setTimeout(() => setStatus("idle"), 1500);
+      } else {
+        setStatus("idle");
+      }
+    },
+    [title, icon, cover, noteId, supabase, onMetaChange]
+  );
 
   const scheduleSave = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(persist, 700);
+    timer.current = setTimeout(() => persist(), 700);
   }, [persist]);
 
   function handleDocChange(blocks: Block[]) {
@@ -109,7 +120,25 @@ export default function Editor({
     setPickerOpen(false);
     onMetaChange({ id: noteId, title, icon: value });
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(persist, 100);
+    timer.current = setTimeout(() => persist({ icon: value }), 100);
+  }
+
+  async function handleCoverFile(file: File) {
+    setCoverBusy(true);
+    try {
+      const result = await uploadImage(file);
+      setCover(result.secure_url);
+      await persist({ cover_url: result.secure_url });
+    } catch {
+      /* ignore */
+    } finally {
+      setCoverBusy(false);
+    }
+  }
+
+  async function removeCover() {
+    setCover(null);
+    await persist({ cover_url: null });
   }
 
   if (loading) {
@@ -132,50 +161,108 @@ export default function Editor({
   const initialContent = (note.doc as PartialBlock[] | null) ?? undefined;
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-10 md:px-10">
-      {/* Status */}
-      <div className="mb-2 h-4 text-xs text-slate-400">
-        {status === "saving"
-          ? "Menyimpan…"
-          : status === "saved"
-          ? "Tersimpan ✓"
-          : ""}
-      </div>
-
-      {/* Icon */}
-      <div className="relative inline-block">
-        <button
-          onClick={() => setPickerOpen((o) => !o)}
-          className="rounded-lg p-1 text-5xl leading-none transition hover:bg-slate-100 dark:hover:bg-slate-800"
-          aria-label="Ganti ikon"
-        >
-          {icon}
-        </button>
-        {pickerOpen && (
-          <EmojiPicker
-            onPick={handleIconChange}
-            onClose={() => setPickerOpen(false)}
-          />
-        )}
-      </div>
-
-      {/* Title */}
-      <textarea
-        value={title}
-        onChange={(e) => handleTitleChange(e.target.value)}
-        placeholder="Tanpa judul"
-        rows={1}
-        className="mt-2 w-full resize-none border-none bg-transparent text-4xl font-bold leading-tight tracking-tight outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600"
+    <div className="group/page">
+      <input
+        ref={coverInput}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) handleCoverFile(f);
+          e.target.value = "";
+        }}
       />
 
-      {/* Block editor */}
-      <div className="mt-3">
-        <BlockNoteEditor
-          key={note.id}
-          initialContent={initialContent}
-          onChange={handleDocChange}
-          theme={theme}
+      {/* Cover */}
+      {cover && (
+        <div className="group/cover relative h-44 w-full overflow-hidden bg-slate-100 dark:bg-slate-800 sm:h-56">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={cover} alt="Cover" className="h-full w-full object-cover" />
+          <div className="absolute bottom-3 right-3 flex gap-2 opacity-0 transition group-hover/cover:opacity-100">
+            <button
+              onClick={() => coverInput.current?.click()}
+              className="rounded-md bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur hover:bg-black/70"
+            >
+              {coverBusy ? "Mengunggah…" : "Ganti cover"}
+            </button>
+            <button
+              onClick={removeCover}
+              className="rounded-md bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur hover:bg-black/70"
+            >
+              Hapus
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div
+        className={`mx-auto w-full max-w-3xl px-6 md:px-10 ${
+          cover ? "pt-4" : "pt-10"
+        } pb-16`}
+      >
+        {/* Hover toolbar */}
+        <div className="mb-1 flex h-7 items-center gap-1 text-xs text-slate-500">
+          <span className="mr-auto text-slate-400">
+            {status === "saving"
+              ? "Menyimpan…"
+              : status === "saved"
+              ? "Tersimpan ✓"
+              : ""}
+          </span>
+          <div className="flex gap-1 opacity-0 transition group-hover/page:opacity-100">
+            {!cover && (
+              <button
+                onClick={() => coverInput.current?.click()}
+                className="rounded-md px-2 py-1 font-medium hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                {coverBusy ? "Mengunggah…" : "🖼️ Tambah cover"}
+              </button>
+            )}
+            <button
+              onClick={() => onCreateSubpage(note.id)}
+              className="rounded-md px-2 py-1 font-medium hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              ＋ Sub-halaman
+            </button>
+          </div>
+        </div>
+
+        {/* Icon */}
+        <div className="relative inline-block">
+          <button
+            onClick={() => setPickerOpen((o) => !o)}
+            className="rounded-lg p-1 text-5xl leading-none transition hover:bg-slate-100 dark:hover:bg-slate-800"
+            aria-label="Ganti ikon"
+          >
+            {icon}
+          </button>
+          {pickerOpen && (
+            <EmojiPicker
+              onPick={handleIconChange}
+              onClose={() => setPickerOpen(false)}
+            />
+          )}
+        </div>
+
+        {/* Title */}
+        <textarea
+          value={title}
+          onChange={(e) => handleTitleChange(e.target.value)}
+          placeholder="Tanpa judul"
+          rows={1}
+          className="mt-2 w-full resize-none border-none bg-transparent text-4xl font-bold leading-tight tracking-tight outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600"
         />
+
+        {/* Block editor */}
+        <div className="mt-3">
+          <BlockNoteEditor
+            key={note.id}
+            initialContent={initialContent}
+            onChange={handleDocChange}
+            theme={theme}
+          />
+        </div>
       </div>
     </div>
   );

@@ -3,6 +3,10 @@
 Ruang kerja catatan ala **Notion / AppFlowy** (PWA) dengan:
 
 - 🗂️ **Workspace**: sidebar daftar halaman + area dokumen besar
+- 🌲 **Halaman bertingkat (folder/nested pages)** — sub-halaman tanpa batas
+- ↕️ **Drag & drop**: seret halaman untuk mengurutkan, atau jatuhkan ke atas
+  halaman lain untuk menjadikannya sub-halaman
+- 🖼️ **Cover image per halaman** (diunggah ke Cloudinary)
 - ✍️ **Editor blok slash `/`** (heading, checklist, bullet, kutipan, tabel,
   gambar inline) via **BlockNote**, dengan **autosave**
 - 🌗 **Dark mode**

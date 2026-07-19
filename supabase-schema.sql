@@ -9,8 +9,11 @@
 create table if not exists public.notes (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
+  parent_id uuid references public.notes (id) on delete cascade, -- nested pages
+  position double precision not null default 0,                  -- sibling order
   title text not null default '',
   icon text not null default '📄',
+  cover_url text,                   -- page cover image (Cloudinary)
   doc jsonb,                        -- BlockNote block content
   content text not null default '', -- legacy plain-text (kept for compatibility)
   image_url text,                   -- legacy cover (kept for compatibility)
@@ -18,12 +21,17 @@ create table if not exists public.notes (
   updated_at timestamptz not null default now()
 );
 
--- Upgrade older installs that predate the icon / doc columns.
+-- Upgrade older installs that predate newer columns.
 alter table public.notes add column if not exists icon text not null default '📄';
 alter table public.notes add column if not exists doc jsonb;
+alter table public.notes add column if not exists cover_url text;
+alter table public.notes add column if not exists parent_id uuid references public.notes (id) on delete cascade;
+alter table public.notes add column if not exists position double precision not null default 0;
 alter table public.notes alter column content drop not null;
 
 create index if not exists notes_user_id_idx on public.notes (user_id);
+create index if not exists notes_parent_id_idx on public.notes (parent_id);
+create index if not exists notes_position_idx on public.notes (position);
 create index if not exists notes_updated_at_idx on public.notes (updated_at desc);
 
 alter table public.notes enable row level security;
