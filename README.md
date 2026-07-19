@@ -1,15 +1,24 @@
 # 📝 BagusNote
 
-Aplikasi catatan pribadi (PWA) dengan:
+Ruang kerja catatan ala **Notion / AppFlowy** (PWA) dengan:
 
+- 🗂️ **Workspace**: sidebar daftar halaman + area dokumen besar
+- ✍️ **Editor blok slash `/`** (heading, checklist, bullet, kutipan, tabel,
+  gambar inline) via **BlockNote**, dengan **autosave**
+- 🌗 **Dark mode**
 - 🔐 **Autentikasi** via Supabase (email + kata sandi)
 - 🗄️ **Database** Supabase (Postgres + Row Level Security)
-- 🖼️ **Upload gambar** ke **Cloudinary** (unsigned upload)
+- 🖼️ **Upload gambar** ke **Cloudinary** (unsigned upload) — langsung dari editor
 - 📱 **Installable di HP** (Progressive Web App)
 - 🔔 **Push notification** ke HP (Web Push / VAPID)
 - ▲ Siap **deploy ke Vercel** → `bagusnote.vercel.app`
 
-Dibuat dengan **Next.js 15 (App Router)** + **React 19** + **Tailwind CSS**.
+Dibuat dengan **Next.js 15 (App Router)** + **React 19** + **Tailwind CSS** +
+**BlockNote**.
+
+> Catatan: AppFlowy asli adalah aplikasi Flutter + Rust untuk desktop/HP native
+> dan tidak bisa di-deploy sebagai web app ke Vercel. BagusNote membawa
+> pengalaman serupa (workspace + editor blok) ke web/PWA dengan stack di atas.
 
 ---
 
@@ -97,23 +106,29 @@ Add upload preset** → set **Signing Mode = Unsigned**, lalu ganti
 
 ```
 app/
-  layout.tsx            # root layout + metadata PWA + daftar service worker
-  page.tsx              # halaman utama (server) → NotesApp
-  login/page.tsx        # login / daftar
-  auth/callback/route.ts# callback konfirmasi email Supabase
-  api/push/subscribe    # simpan langganan push
-  api/push/send         # kirim push (VAPID) ke perangkat user
+  layout.tsx             # root layout + metadata PWA + no-flash theme + SW
+  page.tsx               # halaman utama (server) → Workspace
+  login/page.tsx         # login / daftar
+  auth/callback/route.ts # callback konfirmasi email Supabase
+  api/push/subscribe     # simpan langganan push
+  api/push/send          # kirim push (VAPID) ke perangkat user
 components/
-  NotesApp.tsx          # CRUD catatan + upload gambar
-  NotificationBell.tsx  # aktifkan / tes notifikasi
+  Workspace.tsx          # shell: sidebar + area dokumen (+ drawer mobile)
+  Sidebar.tsx            # daftar halaman, cari, baru, tema, keluar
+  Editor.tsx             # judul + ikon + editor blok, autosave
+  BlockNoteEditor.tsx    # BlockNote (slash menu) + upload Cloudinary
+  EmojiPicker.tsx        # pemilih ikon halaman
+  NotificationBell.tsx   # aktifkan / tes notifikasi
   ServiceWorkerRegister.tsx
 lib/
-  supabase/             # client, server, middleware
-  cloudinary.ts         # unsigned upload
-  push-client.ts        # helper Web Push di browser
+  supabase/              # client, server, middleware
+  cloudinary.ts          # unsigned upload
+  push-client.ts         # helper Web Push di browser
+  use-theme.ts           # hook dark mode
+  types.ts               # tipe Note
 public/
-  manifest.json         # manifest PWA
-  sw.js                 # service worker (offline + push)
-  icons/                # ikon aplikasi
-supabase-schema.sql     # skema database + RLS
+  manifest.json          # manifest PWA
+  sw.js                  # service worker (offline + push)
+  icons/                 # ikon aplikasi
+supabase-schema.sql      # skema database + RLS
 ```

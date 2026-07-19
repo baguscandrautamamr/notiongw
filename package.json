@@ -11,6 +11,9 @@
     "gen:icons": "node scripts/gen-icons.mjs"
   },
   "dependencies": {
+    "@blocknote/ariakit": "^0.51.4",
+    "@blocknote/core": "^0.51.4",
+    "@blocknote/react": "^0.51.4",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.110.7",
     "next": "^15.5.20",

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import NotesApp from "@/components/NotesApp";
-import type { Note } from "@/lib/types";
+import Workspace from "@/components/Workspace";
+import type { NoteSummary } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -17,12 +17,12 @@ export default async function Home() {
 
   const { data: notes } = await supabase
     .from("notes")
-    .select("*")
+    .select("id, title, icon, updated_at")
     .order("updated_at", { ascending: false });
 
   return (
-    <NotesApp
-      initialNotes={(notes as Note[]) ?? []}
+    <Workspace
+      initialNotes={(notes as NoteSummary[]) ?? []}
       userEmail={user.email ?? ""}
     />
   );

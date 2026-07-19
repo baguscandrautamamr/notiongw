@@ -1,18 +1,27 @@
 -- ============================================================
 -- BagusNote — Supabase schema
 -- Run this in the Supabase Dashboard → SQL Editor.
+-- Safe to run multiple times (idempotent). If you ran an older
+-- version before, the ALTERs below upgrade your table in place.
 -- ============================================================
 
--- ---------- Notes ----------
+-- ---------- Notes (pages) ----------
 create table if not exists public.notes (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
   title text not null default '',
-  content text not null default '',
-  image_url text,
+  icon text not null default '📄',
+  doc jsonb,                        -- BlockNote block content
+  content text not null default '', -- legacy plain-text (kept for compatibility)
+  image_url text,                   -- legacy cover (kept for compatibility)
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Upgrade older installs that predate the icon / doc columns.
+alter table public.notes add column if not exists icon text not null default '📄';
+alter table public.notes add column if not exists doc jsonb;
+alter table public.notes alter column content drop not null;
 
 create index if not exists notes_user_id_idx on public.notes (user_id);
 create index if not exists notes_updated_at_idx on public.notes (updated_at desc);
