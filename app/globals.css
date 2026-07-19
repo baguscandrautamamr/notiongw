@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* Smooth iOS-style momentum scrolling inside note lists */
+.scroll-area {
+  -webkit-overflow-scrolling: touch;
+}
+
+textarea {
+  field-sizing: content;
+}
