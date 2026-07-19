@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Excalidraw, exportToBlob } from "@excalidraw/excalidraw";
 import "@excalidraw/excalidraw/index.css";
 import { createClient } from "@/lib/supabase/client";
+import { updateNote } from "@/lib/offline-queue";
 import type { Note, NoteSummary } from "@/lib/types";
 import EmojiPicker from "@/components/EmojiPicker";
 import Breadcrumb from "@/components/Breadcrumb";
@@ -90,16 +91,13 @@ export default function WhiteboardView({
 
   const persist = useCallback(async () => {
     setStatus("saving");
-    const { error } = await supabase
-      .from("notes")
-      .update({
-        title: titleRef.current.trim(),
-        icon: iconRef.current,
-        doc: sceneRef.current,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", noteId);
-    if (!error) {
+    const { ok, queued } = await updateNote(supabase, noteId, {
+      title: titleRef.current.trim(),
+      icon: iconRef.current,
+      doc: sceneRef.current,
+      updated_at: new Date().toISOString(),
+    });
+    if (ok || queued) {
       setStatus("saved");
       onMetaChange({
         id: noteId,

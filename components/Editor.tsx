@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { Block, PartialBlock } from "@blocknote/core";
 import { createClient } from "@/lib/supabase/client";
+import { updateNote } from "@/lib/offline-queue";
+import { blocksToPlainText } from "@/lib/blocks-text";
 import { uploadImage } from "@/lib/cloudinary";
 import type { Note, NoteSummary } from "@/lib/types";
 import EmojiPicker from "@/components/EmojiPicker";
@@ -87,14 +89,15 @@ export default function Editor({
         updated_at: new Date().toISOString(),
         ...overrides,
       };
-      if (docRef.current) payload.doc = docRef.current;
+      if (docRef.current) {
+        payload.doc = docRef.current;
+        // Mirror the document text into `content` as a search index.
+        payload.content = blocksToPlainText(docRef.current);
+      }
 
-      const { error } = await supabase
-        .from("notes")
-        .update(payload)
-        .eq("id", noteId);
+      const { ok, queued } = await updateNote(supabase, noteId, payload);
 
-      if (!error) {
+      if (ok || queued) {
         setStatus("saved");
         onMetaChange({ id: noteId, title: title.trim(), icon });
         setTimeout(() => setStatus("idle"), 1500);

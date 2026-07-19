@@ -32,12 +32,14 @@ alter table public.notes add column if not exists position double precision not 
 alter table public.notes add column if not exists type text not null default 'document';
 alter table public.notes add column if not exists db jsonb;
 alter table public.notes add column if not exists is_public boolean not null default false;
+alter table public.notes add column if not exists deleted_at timestamptz; -- soft-delete (Trash)
 alter table public.notes alter column content drop not null;
 
 create index if not exists notes_user_id_idx on public.notes (user_id);
 create index if not exists notes_parent_id_idx on public.notes (parent_id);
 create index if not exists notes_position_idx on public.notes (position);
 create index if not exists notes_updated_at_idx on public.notes (updated_at desc);
+create index if not exists notes_deleted_at_idx on public.notes (deleted_at);
 
 alter table public.notes enable row level security;
 
@@ -67,6 +69,19 @@ drop policy if exists "notes are deletable by owner" on public.notes;
 create policy "notes are deletable by owner"
   on public.notes for delete
   using (auth.uid() = user_id);
+
+-- ---------- Realtime ----------
+-- Broadcast row changes on `notes` so open sessions sync live across devices.
+-- RLS still applies: each client only receives changes to rows it can read.
+do $$
+begin
+  begin
+    alter publication supabase_realtime add table public.notes;
+  exception
+    when duplicate_object then null; -- already added
+    when undefined_object then null; -- publication not present (self-hosted)
+  end;
+end $$;
 
 -- ---------- Push subscriptions ----------
 create table if not exists public.push_subscriptions (

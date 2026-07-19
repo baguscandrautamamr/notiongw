@@ -14,6 +14,7 @@ export type Note = {
   is_public: boolean;
   content: string | null;
   image_url: string | null;
+  deleted_at: string | null;
   created_at: string;
   updated_at: string;
 };

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { NoteSummary, PageType } from "@/lib/types";
 import type { MoveMode } from "@/components/Workspace";
+import { pendingCount, subscribePending } from "@/lib/offline-queue";
 import NotificationBell from "@/components/NotificationBell";
 import PageTree from "@/components/PageTree";
 import NewPageButton from "@/components/NewPageButton";
@@ -22,6 +23,8 @@ export default function Sidebar({
   onToggleExpand,
   onToggleTheme,
   onCloseMobile,
+  onOpenSearch,
+  onOpenTrash,
 }: {
   notes: NoteSummary[];
   activeId: string | null;
@@ -35,10 +38,18 @@ export default function Sidebar({
   onToggleExpand: (id: string) => void;
   onToggleTheme: () => void;
   onCloseMobile: () => void;
+  onOpenSearch: () => void;
+  onOpenTrash: () => void;
 }) {
   const router = useRouter();
   const supabase = createClient();
   const [query, setQuery] = useState("");
+  const [pending, setPending] = useState(0);
+
+  useEffect(() => {
+    setPending(pendingCount());
+    return subscribePending(() => setPending(pendingCount()));
+  }, []);
 
   const q = query.trim().toLowerCase();
   const matches = q
@@ -71,14 +82,24 @@ export default function Sidebar({
         </button>
       </div>
 
-      {/* Search */}
-      <div className="px-3 pb-2">
+      {/* Search: quick title filter + global full-text button */}
+      <div className="space-y-1.5 px-3 pb-2">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Cari halaman…"
+          placeholder="Filter judul…"
           className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-800 dark:focus:ring-brand-500/20"
         />
+        <button
+          onClick={onOpenSearch}
+          className="flex w-full items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-500 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700/60"
+        >
+          <span>🔎</span>
+          <span className="flex-1 text-left">Cari isi semua halaman</span>
+          <kbd className="rounded border border-slate-200 px-1.5 py-0.5 text-[10px] dark:border-slate-600">
+            ⌘K
+          </kbd>
+        </button>
       </div>
 
       {/* New page */}
@@ -128,6 +149,14 @@ export default function Sidebar({
         )}
       </nav>
 
+      {/* Offline indicator */}
+      {pending > 0 && (
+        <div className="mx-2 mb-1 flex items-center gap-1.5 rounded-md bg-amber-50 px-2.5 py-1.5 text-xs text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
+          <span>⏳</span>
+          <span>{pending} perubahan menunggu koneksi…</span>
+        </div>
+      )}
+
       {/* Footer controls */}
       <div className="flex items-center gap-1 border-t border-slate-200 px-2 py-2 dark:border-slate-800">
         <NotificationBell />
@@ -138,6 +167,14 @@ export default function Sidebar({
           aria-label="Ganti tema"
         >
           {theme === "dark" ? "☀️" : "🌙"}
+        </button>
+        <button
+          onClick={onOpenTrash}
+          className="rounded-lg px-2.5 py-2 text-sm transition hover:bg-slate-200 dark:hover:bg-slate-800"
+          title="Sampah"
+          aria-label="Sampah"
+        >
+          🗑️
         </button>
         <div className="flex-1" />
         <button
