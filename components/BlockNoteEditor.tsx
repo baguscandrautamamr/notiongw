@@ -74,6 +74,33 @@ export default function BlockNoteEditor({
 
   return (
     <>
+      {/* Undo / redo — always visible so mistakes are easy to reverse,
+          especially on touch where keyboard shortcuts aren't handy. */}
+      {editable && (
+        <div className="mb-2 flex items-center gap-1">
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => editor.undo()}
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+            title="Urungkan (Ctrl+Z)"
+            aria-label="Urungkan"
+          >
+            ↺
+          </button>
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => editor.redo()}
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+            title="Ulangi (Ctrl+Shift+Z)"
+            aria-label="Ulangi"
+          >
+            ↻
+          </button>
+        </div>
+      )}
+
       <BlockNoteView
         editor={editor}
         theme={theme}

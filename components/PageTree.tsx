@@ -120,10 +120,11 @@ export default function PageTree({
             <span className="truncate">{node.title || "Tanpa judul"}</span>
           </button>
 
-          {/* favorite star — always visible when active, else on hover */}
+          {/* favorite star — visible when active/favorited or on hover;
+              always shown on touch devices where there is no hover */}
           <button
             onClick={() => onToggleFavorite(node.id)}
-            className={`shrink-0 rounded p-1 transition hover:bg-slate-300/50 group-hover:opacity-100 dark:hover:bg-slate-700 ${
+            className={`shrink-0 rounded p-1 transition hover:bg-slate-300/50 group-hover:opacity-100 [@media(hover:none)]:opacity-100 dark:hover:bg-slate-700 ${
               node.is_favorite
                 ? "text-amber-400 opacity-100"
                 : "text-slate-400 opacity-0"
@@ -134,10 +135,10 @@ export default function PageTree({
             {node.is_favorite ? "★" : "☆"}
           </button>
 
-          {/* hover actions */}
+          {/* row actions — revealed on hover (desktop), always shown on touch */}
           <button
             onClick={() => onNew(node.id)}
-            className="shrink-0 rounded p-1 text-slate-400 opacity-0 transition hover:bg-slate-300/50 hover:text-slate-700 group-hover:opacity-100 dark:hover:bg-slate-700 dark:hover:text-white"
+            className="shrink-0 rounded p-1 text-slate-400 opacity-0 transition hover:bg-slate-300/50 hover:text-slate-700 group-hover:opacity-100 [@media(hover:none)]:opacity-100 dark:hover:bg-slate-700 dark:hover:text-white"
             title="Sub-halaman baru"
             aria-label="Sub-halaman baru"
           >
@@ -145,7 +146,7 @@ export default function PageTree({
           </button>
           <button
             onClick={() => onDuplicate(node.id)}
-            className="shrink-0 rounded p-1 text-slate-400 opacity-0 transition hover:bg-slate-300/50 hover:text-slate-700 group-hover:opacity-100 dark:hover:bg-slate-700 dark:hover:text-white"
+            className="shrink-0 rounded p-1 text-slate-400 opacity-0 transition hover:bg-slate-300/50 hover:text-slate-700 group-hover:opacity-100 [@media(hover:none)]:opacity-100 dark:hover:bg-slate-700 dark:hover:text-white"
             title="Duplikat halaman"
             aria-label="Duplikat halaman"
           >
@@ -153,7 +154,7 @@ export default function PageTree({
           </button>
           <button
             onClick={() => onDelete(node.id)}
-            className="shrink-0 rounded p-1 text-slate-400 opacity-0 transition hover:text-red-500 group-hover:opacity-100"
+            className="shrink-0 rounded p-1 text-slate-400 opacity-0 transition hover:text-red-500 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
             title="Hapus"
             aria-label="Hapus"
           >
