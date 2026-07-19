@@ -8,6 +8,9 @@ Ruang kerja catatan ala **Notion / AppFlowy** (PWA) dengan:
   bisa **di-embed ke dalam dokumen** (ketik `/papan`) dan **export ke PNG**
 - 👤 **Penanggung jawab (assignee)** dengan foto/avatar di database
 - 🌐 **Share halaman via link publik** (baca-saja, tanpa perlu login)
+- ⭐ **Favorit** & 🕒 **Terkini** di sidebar untuk akses cepat
+- ⎘ **Duplikat halaman** (menyalin isi dokumen/database)
+- ⬇ **Ekspor database ke CSV** (mengikuti filter/urutan yang aktif)
 - 🔎 **Pencarian full-text** (judul **dan** isi semua halaman) — tekan `⌘K` / `Ctrl+K`
 - 🗑️ **Sampah (soft-delete)**: halaman yang dihapus bisa **dipulihkan** atau
   dihapus permanen — tidak langsung hilang

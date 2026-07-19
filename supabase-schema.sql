@@ -33,6 +33,7 @@ alter table public.notes add column if not exists type text not null default 'do
 alter table public.notes add column if not exists db jsonb;
 alter table public.notes add column if not exists is_public boolean not null default false;
 alter table public.notes add column if not exists deleted_at timestamptz; -- soft-delete (Trash)
+alter table public.notes add column if not exists is_favorite boolean not null default false; -- pinned/favorites
 alter table public.notes alter column content drop not null;
 
 create index if not exists notes_user_id_idx on public.notes (user_id);
