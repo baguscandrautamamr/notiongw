@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { type Database, firstTextFieldId } from "@/lib/db-types";
-import { addField, addRow, updateCell } from "@/lib/db-ops";
+import { addField, addRow, setCell, visibleRows } from "@/lib/db-ops";
 import { OptionChip } from "@/components/db/SelectCell";
 import RowDetail from "@/components/db/RowDetail";
 
@@ -59,12 +59,10 @@ export default function BoardView({
   ];
 
   const rowsFor = (key: string | "none") =>
-    db.rows
-      .filter((r) => {
-        const v = (r.cells[groupField.id] as string) ?? null;
-        return key === "none" ? !v : v === key;
-      })
-      .sort((a, b) => a.position - b.position);
+    visibleRows(db).filter((r) => {
+      const v = (r.cells[groupField.id] as string) ?? null;
+      return key === "none" ? !v : v === key;
+    });
 
   const otherSelects = db.fields.filter(
     (f) => f.type === "select" && f.id !== groupField.id
@@ -75,7 +73,7 @@ export default function BoardView({
   const drop = (key: string | "none") => {
     if (dragRow) {
       const value = key === "none" ? null : key;
-      update((d) => updateCell(d, dragRow, groupField.id, value));
+      update((d) => setCell(d, dragRow, groupField.id, value));
     }
     setDragRow(null);
     setDropCol(null);

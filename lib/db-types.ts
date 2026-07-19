@@ -6,13 +6,16 @@ export type FieldType =
   | "select"
   | "checkbox"
   | "date"
-  | "progress";
+  | "progress"
+  | "checklist";
 
 export type SelectOption = {
   id: string;
   name: string;
   color: string; // tailwind-ish token key, see OPTION_COLORS
 };
+
+export type ChecklistItem = { id: string; text: string; done: boolean };
 
 export type Field = {
   id: string;
@@ -28,10 +31,18 @@ export type Row = {
   cells: Record<string, unknown>; // fieldId -> value
 };
 
+// Per-database view settings (filter/sort), persisted with the db.
+export type ViewConfig = {
+  sortFieldId: string | null;
+  sortDir: "asc" | "desc";
+  hideDone: boolean;
+};
+
 export type Database = {
   fields: Field[];
   rows: Row[];
   groupByFieldId: string | null; // which select field the Board groups by
+  view: ViewConfig;
 };
 
 export const OPTION_COLORS: Record<string, { bg: string; text: string }> = {
@@ -55,7 +66,13 @@ export function uid(): string {
   return "id-" + Date.now().toString(36) + "-" + performance.now().toString(36);
 }
 
-// A fresh database with a Name column, a Status select, and a Done checkbox.
+export const DEFAULT_VIEW: ViewConfig = {
+  sortFieldId: null,
+  sortDir: "asc",
+  hideDone: false,
+};
+
+// A fresh database with common task-tracker columns.
 export function defaultDatabase(): Database {
   const statusId = uid();
   return {
@@ -72,10 +89,12 @@ export function defaultDatabase(): Database {
         ],
       },
       { id: uid(), name: "Progres", type: "progress" },
+      { id: uid(), name: "Tanggal", type: "date" },
       { id: uid(), name: "Selesai", type: "checkbox" },
     ],
     rows: [],
     groupByFieldId: statusId,
+    view: { ...DEFAULT_VIEW },
   };
 }
 
@@ -89,9 +108,22 @@ export function coerceDatabase(value: unknown): Database {
       db.groupByFieldId ??
       db.fields.find((f) => f.type === "select")?.id ??
       null,
+    view: { ...DEFAULT_VIEW, ...(db.view ?? {}) },
   };
 }
 
 export function firstTextFieldId(fields: Field[]): string | null {
   return fields.find((f) => f.type === "text")?.id ?? fields[0]?.id ?? null;
+}
+
+// ----- Checklist helpers -----
+export function asChecklist(value: unknown): ChecklistItem[] {
+  return Array.isArray(value) ? (value as ChecklistItem[]) : [];
+}
+
+export function checklistPercent(value: unknown): number {
+  const items = asChecklist(value);
+  if (items.length === 0) return 0;
+  const done = items.filter((i) => i.done).length;
+  return Math.round((done / items.length) * 100);
 }

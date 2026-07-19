@@ -8,12 +8,14 @@ import {
   coerceDatabase,
   defaultDatabase,
 } from "@/lib/db-types";
+import { setView } from "@/lib/db-ops";
 import EmojiPicker from "@/components/EmojiPicker";
 import Breadcrumb from "@/components/Breadcrumb";
 import GridView from "@/components/db/GridView";
 import BoardView from "@/components/db/BoardView";
+import CalendarView from "@/components/db/CalendarView";
 
-type ViewKind = "grid" | "board";
+type ViewKind = "grid" | "board" | "calendar";
 
 export default function DatabaseView({
   noteId,
@@ -32,7 +34,7 @@ export default function DatabaseView({
   const [title, setTitle] = useState("");
   const [icon, setIcon] = useState("🗂️");
   const [db, setDb] = useState<Database>(() => defaultDatabase());
-  const [view, setView] = useState<ViewKind>("grid");
+  const [view, setViewKind] = useState<ViewKind>("grid");
   const [status, setStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -63,7 +65,7 @@ export default function DatabaseView({
       const database = n?.db ? coerceDatabase(n.db) : defaultDatabase();
       setDb(database);
       dbRef.current = database;
-      setView(n?.type === "board" ? "board" : "grid");
+      setViewKind(n?.type === "board" ? "board" : "grid");
       setLoading(false);
     })();
     return () => {
@@ -172,25 +174,76 @@ export default function DatabaseView({
 
       {/* View tabs */}
       <div className="mb-3 mt-2 flex items-center gap-1 border-b border-slate-200 dark:border-slate-800">
-        {(["grid", "board"] as ViewKind[]).map((v) => (
+        {(["grid", "board", "calendar"] as ViewKind[]).map((v) => (
           <button
             key={v}
-            onClick={() => setView(v)}
+            onClick={() => setViewKind(v)}
             className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium transition ${
               view === v
                 ? "border-brand-500 text-slate-900 dark:text-white"
                 : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
             }`}
           >
-            {v === "grid" ? "▦ Tabel" : "▤ Board"}
+            {v === "grid" ? "▦ Tabel" : v === "board" ? "▤ Board" : "📅 Kalender"}
           </button>
         ))}
       </div>
 
+      {/* Filter / sort toolbar */}
+      <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
+        <button
+          onClick={() => update((d) => setView(d, { hideDone: !d.view.hideDone }))}
+          className={`rounded-lg border px-2.5 py-1 transition ${
+            db.view.hideDone
+              ? "border-brand-500 bg-brand-50 text-brand-700 dark:bg-slate-800 dark:text-brand-200"
+              : "border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+          }`}
+        >
+          {db.view.hideDone ? "☑" : "☐"} Sembunyikan selesai
+        </button>
+
+        <div className="flex items-center gap-1">
+          <span className="text-slate-400">Urut:</span>
+          <select
+            value={db.view.sortFieldId ?? ""}
+            onChange={(e) =>
+              update((d) =>
+                setView(d, { sortFieldId: e.target.value || null })
+              )
+            }
+            className="rounded-lg border border-slate-200 bg-white px-2 py-1 outline-none dark:border-slate-700 dark:bg-slate-800"
+          >
+            <option value="">Manual</option>
+            {db.fields.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
+              </option>
+            ))}
+          </select>
+          {db.view.sortFieldId && (
+            <button
+              onClick={() =>
+                update((d) =>
+                  setView(d, {
+                    sortDir: d.view.sortDir === "asc" ? "desc" : "asc",
+                  })
+                )
+              }
+              className="rounded-lg border border-slate-200 px-2 py-1 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+              title="Arah urutan"
+            >
+              {db.view.sortDir === "asc" ? "↑" : "↓"}
+            </button>
+          )}
+        </div>
+      </div>
+
       {view === "grid" ? (
         <GridView db={db} update={update} />
-      ) : (
+      ) : view === "board" ? (
         <BoardView db={db} update={update} />
+      ) : (
+        <CalendarView db={db} update={update} />
       )}
     </div>
   );

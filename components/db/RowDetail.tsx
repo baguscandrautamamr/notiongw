@@ -14,6 +14,7 @@ const TYPE_ICON: Record<string, string> = {
   checkbox: "☑",
   date: "📅",
   progress: "▰",
+  checklist: "☑",
 };
 
 export default function RowDetail({
@@ -78,6 +79,7 @@ export default function RowDetail({
                     rowId={rowId}
                     value={row.cells[f.id]}
                     update={update}
+                    variant="detail"
                   />
                 </div>
               </div>

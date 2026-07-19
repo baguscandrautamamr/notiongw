@@ -7,9 +7,14 @@ Ruang kerja catatan ala **Notion / AppFlowy** (PWA) dengan:
 - 🌲 **Halaman bertingkat (folder/nested pages)** — sub-halaman tanpa batas
 - ↕️ **Drag & drop**: seret halaman untuk mengurutkan, atau jatuhkan ke atas
   halaman lain untuk menjadikannya sub-halaman
-- 🗄️ **Database page**: tipe halaman **Tabel (Grid)** & **Board (Kanban)**
-  dengan tipe kolom (Teks, Angka, Pilihan/Status, Centang, Tanggal), tambah/
-  hapus baris & kolom, drag kartu antar kolom, dan panel detail baris
+- 🗄️ **Database page**: tipe halaman **Tabel (Grid)**, **Board (Kanban)** &
+  **Kalender**, dengan tipe kolom (Teks, Angka, Pilihan/Status, Centang,
+  Tanggal, **Progres %**, **Sub-task/checklist**), tambah/hapus baris & kolom,
+  drag kartu antar kolom, dan panel detail baris
+- ✅ **Otomasi**: centang *Selesai* / Status *Done* / Progres 100% saling
+  sinkron otomatis; progres terisi otomatis dari checklist sub-task
+- 🔎 **Filter & Sort** (sembunyikan yang selesai, urutkan per kolom)
+- ⏰ **Pengingat deadline ke HP** via cron harian (lihat setup di bawah)
 - 🖼️ **Cover image per halaman** (diunggah ke Cloudinary)
 - ✍️ **Editor blok slash `/`** (heading, checklist, bullet, kutipan,
   gambar inline) via **BlockNote**, dengan **autosave**
@@ -83,6 +88,24 @@ Add upload preset** → set **Signing Mode = Unsigned**, lalu ganti
 `NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET`.
 
 ---
+
+## 3b. Pengingat deadline ke HP (opsional)
+
+Cron harian memindai task yang jatuh tempo (kolom **Tanggal**) dan belum
+selesai, lalu mengirim notifikasi push ke HP pemiliknya.
+
+1. Tambahkan env var di Vercel:
+   - `SUPABASE_SERVICE_ROLE_KEY` — dari Supabase → Settings → API → **service_role**
+     (RAHASIA, server-only).
+   - `CRON_SECRET` — string acak panjang bebas.
+2. `vercel.json` sudah berisi jadwal cron `0 1 * * *` (08:00 WIB). Vercel akan
+   memanggil `/api/cron/reminders` otomatis dan mengirim header
+   `Authorization: Bearer <CRON_SECRET>`.
+3. Uji manual:
+   `curl -H "Authorization: Bearer <CRON_SECRET>" https://bagusnote.vercel.app/api/cron/reminders`
+
+> Tanpa `SUPABASE_SERVICE_ROLE_KEY`, fitur pengingat tidak aktif (fitur lain
+> tetap jalan).
 
 ## 4. Deploy ke Vercel
 

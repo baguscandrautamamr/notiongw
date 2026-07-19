@@ -13,6 +13,7 @@ import {
   deleteRow,
   setGroupBy,
   updateField,
+  visibleRows,
 } from "@/lib/db-ops";
 import CellEditor from "@/components/db/CellEditor";
 
@@ -23,6 +24,7 @@ const TYPE_META: Record<FieldType, { icon: string; label: string }> = {
   checkbox: { icon: "☑", label: "Centang" },
   date: { icon: "📅", label: "Tanggal" },
   progress: { icon: "▰", label: "Progres" },
+  checklist: { icon: "☑", label: "Sub-task" },
 };
 
 type Update = (fn: (db: Database) => Database) => void;
@@ -121,6 +123,7 @@ function AddColumn({ update }: { update: Update }) {
     "checkbox",
     "date",
     "progress",
+    "checklist",
   ];
   return (
     <div ref={ref} className="relative">
@@ -161,7 +164,7 @@ export default function GridView({
   db: Database;
   update: Update;
 }) {
-  const rows = [...db.rows].sort((a, b) => a.position - b.position);
+  const rows = visibleRows(db);
 
   const cell = (fieldId: string, rowId: string, field: Field) => {
     const value = db.rows.find((r) => r.id === rowId)?.cells[fieldId];
