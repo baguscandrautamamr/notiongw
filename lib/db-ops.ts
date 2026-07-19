@@ -216,6 +216,7 @@ const TYPE_DEFAULT_NAME: Record<FieldType, string> = {
   date: "Tanggal",
   progress: "Progres",
   checklist: "Sub-task",
+  person: "Penanggung jawab",
 };
 
 export function addField(db: Database, type: FieldType): Database {
@@ -223,7 +224,7 @@ export function addField(db: Database, type: FieldType): Database {
     id: uid(),
     name: TYPE_DEFAULT_NAME[type],
     type,
-    ...(type === "select" ? { options: [] } : {}),
+    ...(type === "select" || type === "person" ? { options: [] } : {}),
   };
   const groupByFieldId =
     type === "select" && !db.groupByFieldId ? field.id : db.groupByFieldId;
@@ -279,6 +280,21 @@ export function addOption(
 
 export function setGroupBy(db: Database, fieldId: string | null): Database {
   return { ...db, groupByFieldId: fieldId };
+}
+
+export function setOptionPhoto(
+  db: Database,
+  fieldId: string,
+  optionId: string,
+  photo: string
+): Database {
+  const field = db.fields.find((f) => f.id === fieldId);
+  if (!field?.options) return db;
+  return updateField(db, fieldId, {
+    options: field.options.map((o) =>
+      o.id === optionId ? { ...o, photo } : o
+    ),
+  });
 }
 
 // ---------- View (filter/sort) ----------

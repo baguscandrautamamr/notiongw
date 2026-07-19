@@ -7,12 +7,14 @@ export type FieldType =
   | "checkbox"
   | "date"
   | "progress"
-  | "checklist";
+  | "checklist"
+  | "person";
 
 export type SelectOption = {
   id: string;
   name: string;
   color: string; // tailwind-ish token key, see OPTION_COLORS
+  photo?: string; // avatar URL (for "person" fields)
 };
 
 export type ChecklistItem = { id: string; text: string; done: boolean };

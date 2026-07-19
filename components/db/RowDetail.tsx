@@ -15,6 +15,7 @@ const TYPE_ICON: Record<string, string> = {
   date: "📅",
   progress: "▰",
   checklist: "☑",
+  person: "👤",
 };
 
 export default function RowDetail({

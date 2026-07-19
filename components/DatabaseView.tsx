@@ -11,6 +11,7 @@ import {
 import { setView } from "@/lib/db-ops";
 import EmojiPicker from "@/components/EmojiPicker";
 import Breadcrumb from "@/components/Breadcrumb";
+import ShareButton from "@/components/ShareButton";
 import GridView from "@/components/db/GridView";
 import BoardView from "@/components/db/BoardView";
 import CalendarView from "@/components/db/CalendarView";
@@ -140,15 +141,18 @@ export default function DatabaseView({
 
   return (
     <div className="fade-in mx-auto w-full max-w-5xl px-6 pb-16 pt-6 md:px-10">
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-2 flex items-center justify-between gap-2">
         <Breadcrumb notes={notes} activeId={noteId} onSelect={onSelect} />
-        <span className="text-xs text-slate-400">
-          {status === "saving"
-            ? "Menyimpan…"
-            : status === "saved"
-            ? "Tersimpan ✓"
-            : ""}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-400">
+            {status === "saving"
+              ? "Menyimpan…"
+              : status === "saved"
+              ? "Tersimpan ✓"
+              : ""}
+          </span>
+          <ShareButton noteId={noteId} />
+        </div>
       </div>
 
       {/* Icon + title */}

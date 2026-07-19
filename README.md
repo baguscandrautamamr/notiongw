@@ -4,7 +4,10 @@ Ruang kerja catatan ala **Notion / AppFlowy** (PWA) dengan:
 
 - 🗂️ **Workspace**: sidebar daftar halaman + area dokumen besar
 - 🧭 **Breadcrumb** navigasi lokasi halaman
-- 🎨 **Whiteboard** (papan gambar ala Excalidraw) sebagai tipe halaman
+- 🎨 **Whiteboard** (papan gambar ala Excalidraw) sebagai tipe halaman —
+  bisa **di-embed ke dalam dokumen** (ketik `/papan`) dan **export ke PNG**
+- 👤 **Penanggung jawab (assignee)** dengan foto/avatar di database
+- 🌐 **Share halaman via link publik** (baca-saja, tanpa perlu login)
 - 🌲 **Halaman bertingkat (folder/nested pages)** — sub-halaman tanpa batas
 - ↕️ **Drag & drop**: seret halaman untuk mengurutkan, atau jatuhkan ke atas
   halaman lain untuk menjadikannya sub-halaman

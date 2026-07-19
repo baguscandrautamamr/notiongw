@@ -42,6 +42,7 @@ export async function updateSession(request: NextRequest) {
     path === "/manifest.json" ||
     path === "/sw.js" ||
     path.startsWith("/icons") ||
+    path.startsWith("/share") ||
     path.startsWith("/api/push");
 
   // Not logged in and trying to reach a protected page -> go to login

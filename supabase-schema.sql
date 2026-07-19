@@ -31,6 +31,7 @@ alter table public.notes add column if not exists parent_id uuid references publ
 alter table public.notes add column if not exists position double precision not null default 0;
 alter table public.notes add column if not exists type text not null default 'document';
 alter table public.notes add column if not exists db jsonb;
+alter table public.notes add column if not exists is_public boolean not null default false;
 alter table public.notes alter column content drop not null;
 
 create index if not exists notes_user_id_idx on public.notes (user_id);
@@ -44,6 +45,12 @@ drop policy if exists "notes are viewable by owner" on public.notes;
 create policy "notes are viewable by owner"
   on public.notes for select
   using (auth.uid() = user_id);
+
+-- Public share links: anyone (even signed-out) can read a note flagged public.
+drop policy if exists "public notes are readable by anyone" on public.notes;
+create policy "public notes are readable by anyone"
+  on public.notes for select
+  using (is_public = true);
 
 drop policy if exists "notes are insertable by owner" on public.notes;
 create policy "notes are insertable by owner"

@@ -16,6 +16,7 @@ import {
   toggleChecklistItem,
 } from "@/lib/db-ops";
 import SelectCell from "@/components/db/SelectCell";
+import PersonCell from "@/components/db/PersonCell";
 
 type Update = (fn: (db: Database) => Database) => void;
 
@@ -203,6 +204,15 @@ export default function CellEditor({
         </div>
       );
     }
+    case "person":
+      return (
+        <PersonCell
+          field={field}
+          rowId={rowId}
+          value={(value as string) ?? null}
+          update={update}
+        />
+      );
     case "select":
       return (
         <SelectCell

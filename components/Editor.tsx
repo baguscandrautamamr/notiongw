@@ -8,6 +8,7 @@ import { uploadImage } from "@/lib/cloudinary";
 import type { Note, NoteSummary } from "@/lib/types";
 import EmojiPicker from "@/components/EmojiPicker";
 import Breadcrumb from "@/components/Breadcrumb";
+import ShareButton from "@/components/ShareButton";
 
 const BlockNoteEditor = dynamic(() => import("@/components/BlockNoteEditor"), {
   ssr: false,
@@ -207,8 +208,9 @@ export default function Editor({
         } pb-16`}
       >
         {/* Breadcrumb */}
-        <div className="mb-1">
+        <div className="mb-1 flex items-center justify-between gap-2">
           <Breadcrumb notes={notes} activeId={noteId} onSelect={onSelect} />
+          <ShareButton noteId={noteId} />
         </div>
 
         {/* Hover toolbar */}

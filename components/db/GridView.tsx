@@ -25,6 +25,7 @@ const TYPE_META: Record<FieldType, { icon: string; label: string }> = {
   date: { icon: "📅", label: "Tanggal" },
   progress: { icon: "▰", label: "Progres" },
   checklist: { icon: "☑", label: "Sub-task" },
+  person: { icon: "👤", label: "Penanggung jawab" },
 };
 
 type Update = (fn: (db: Database) => Database) => void;
@@ -124,6 +125,7 @@ function AddColumn({ update }: { update: Update }) {
     "date",
     "progress",
     "checklist",
+    "person",
   ];
   return (
     <div ref={ref} className="relative">

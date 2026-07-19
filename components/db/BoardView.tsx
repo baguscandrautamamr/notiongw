@@ -4,6 +4,7 @@ import { useState } from "react";
 import { type Database, firstTextFieldId } from "@/lib/db-types";
 import { addField, addRow, setCell, visibleRows } from "@/lib/db-ops";
 import { OptionChip } from "@/components/db/SelectCell";
+import { PersonChip } from "@/components/db/PersonCell";
 import RowDetail from "@/components/db/RowDetail";
 
 type Update = (fn: (db: Database) => Database) => void;
@@ -69,6 +70,7 @@ export default function BoardView({
   );
   const checkboxes = db.fields.filter((f) => f.type === "checkbox");
   const progressFields = db.fields.filter((f) => f.type === "progress");
+  const personFields = db.fields.filter((f) => f.type === "person");
 
   const drop = (key: string | "none") => {
     if (dragRow) {
@@ -150,6 +152,14 @@ export default function BoardView({
                         );
                       })}
                       <div className="flex flex-wrap items-center gap-1">
+                        {personFields.map((f) => {
+                          const opt = (f.options ?? []).find(
+                            (o) => o.id === row.cells[f.id]
+                          );
+                          return opt ? (
+                            <PersonChip key={f.id} option={opt} />
+                          ) : null;
+                        })}
                         {otherSelects.map((f) => {
                           const opt = (f.options ?? []).find(
                             (o) => o.id === row.cells[f.id]

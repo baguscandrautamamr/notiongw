@@ -11,6 +11,7 @@ export type Note = {
   cover_url: string | null;
   doc: unknown | null; // BlockNote block array (documents)
   db: unknown | null; // Database (grid/board pages)
+  is_public: boolean;
   content: string | null;
   image_url: string | null;
   created_at: string;
