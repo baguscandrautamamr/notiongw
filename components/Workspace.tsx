@@ -163,7 +163,31 @@ export default function Workspace({
         .from("notes")
         .update({ deleted_at: new Date().toISOString() })
         .in("id", [...toRemove]);
-      if (error) setNotes(prev);
+
+      if (!error) return;
+
+      // The `deleted_at` column only exists after the schema migration has
+      // been run. If it's missing, fall back to a permanent delete so the app
+      // still works (FK cascade removes descendants).
+      const missingColumn =
+        error.code === "42703" ||
+        error.code === "PGRST204" ||
+        /deleted_at/i.test(error.message ?? "");
+
+      if (missingColumn) {
+        const { error: delErr } = await supabase
+          .from("notes")
+          .delete()
+          .eq("id", id);
+        if (delErr) {
+          setNotes(prev);
+          alert("Gagal menghapus halaman: " + delErr.message);
+        }
+        return;
+      }
+
+      setNotes(prev);
+      alert("Gagal memindahkan ke Sampah: " + error.message);
     },
     [notes, activeId, supabase]
   );

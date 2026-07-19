@@ -15,11 +15,23 @@ export default async function Home() {
     redirect("/login");
   }
 
-  const { data: notes } = await supabase
+  const cols = "id, title, icon, type, parent_id, position, updated_at";
+  const active = await supabase
     .from("notes")
-    .select("id, title, icon, type, parent_id, position, updated_at")
+    .select(cols)
     .is("deleted_at", null)
     .order("position", { ascending: true });
+
+  // Fall back gracefully if the `deleted_at` migration hasn't been run yet,
+  // so the workspace still loads instead of showing an empty state.
+  const notes = active.error
+    ? (
+        await supabase
+          .from("notes")
+          .select(cols)
+          .order("position", { ascending: true })
+      ).data
+    : active.data;
 
   return (
     <Workspace
