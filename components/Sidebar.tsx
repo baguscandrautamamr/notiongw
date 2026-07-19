@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import type { NoteSummary } from "@/lib/types";
+import type { NoteSummary, PageType } from "@/lib/types";
 import type { MoveMode } from "@/components/Workspace";
 import NotificationBell from "@/components/NotificationBell";
 import PageTree from "@/components/PageTree";
+import NewPageButton from "@/components/NewPageButton";
 
 export default function Sidebar({
   notes,
@@ -28,7 +29,7 @@ export default function Sidebar({
   userEmail: string;
   theme: "light" | "dark";
   onSelect: (id: string) => void;
-  onNew: (parentId: string | null) => void;
+  onNew: (parentId: string | null, type?: PageType) => void;
   onDelete: (id: string) => void;
   onMove: (dragId: string, targetId: string, mode: MoveMode) => void;
   onToggleExpand: (id: string) => void;
@@ -82,12 +83,7 @@ export default function Sidebar({
 
       {/* New page */}
       <div className="px-3 pb-1">
-        <button
-          onClick={() => onNew(null)}
-          className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-800"
-        >
-          <span className="text-base">＋</span> Halaman baru
-        </button>
+        <NewPageButton onNew={(type) => onNew(null, type)} />
       </div>
 
       {/* Page list / tree */}

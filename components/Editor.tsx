@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { uploadImage } from "@/lib/cloudinary";
 import type { Note, NoteSummary } from "@/lib/types";
 import EmojiPicker from "@/components/EmojiPicker";
+import Breadcrumb from "@/components/Breadcrumb";
 
 const BlockNoteEditor = dynamic(() => import("@/components/BlockNoteEditor"), {
   ssr: false,
@@ -23,12 +24,16 @@ type SaveStatus = "idle" | "saving" | "saved";
 
 export default function Editor({
   noteId,
+  notes,
   theme,
+  onSelect,
   onMetaChange,
   onCreateSubpage,
 }: {
   noteId: string;
+  notes: NoteSummary[];
   theme: "light" | "dark";
+  onSelect: (id: string) => void;
   onMetaChange: (meta: Pick<NoteSummary, "id" | "title" | "icon">) => void;
   onCreateSubpage: (parentId: string) => void;
 }) {
@@ -161,7 +166,7 @@ export default function Editor({
   const initialContent = (note.doc as PartialBlock[] | null) ?? undefined;
 
   return (
-    <div className="group/page">
+    <div className="group/page fade-in">
       <input
         ref={coverInput}
         type="file"
@@ -201,6 +206,11 @@ export default function Editor({
           cover ? "pt-4" : "pt-10"
         } pb-16`}
       >
+        {/* Breadcrumb */}
+        <div className="mb-1">
+          <Breadcrumb notes={notes} activeId={noteId} onSelect={onSelect} />
+        </div>
+
         {/* Hover toolbar */}
         <div className="mb-1 flex h-7 items-center gap-1 text-xs text-slate-500">
           <span className="mr-auto text-slate-400">

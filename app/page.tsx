@@ -17,7 +17,7 @@ export default async function Home() {
 
   const { data: notes } = await supabase
     .from("notes")
-    .select("id, title, icon, parent_id, position, updated_at")
+    .select("id, title, icon, type, parent_id, position, updated_at")
     .order("position", { ascending: true });
 
   return (

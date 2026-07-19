@@ -1,12 +1,16 @@
+export type PageType = "document" | "grid" | "board";
+
 export type Note = {
   id: string;
   user_id: string;
   parent_id: string | null;
   position: number;
+  type: PageType;
   title: string;
   icon: string;
   cover_url: string | null;
-  doc: unknown | null; // BlockNote block array
+  doc: unknown | null; // BlockNote block array (documents)
+  db: unknown | null; // Database (grid/board pages)
   content: string | null;
   image_url: string | null;
   created_at: string;
@@ -16,7 +20,7 @@ export type Note = {
 // Lightweight shape used by the sidebar tree.
 export type NoteSummary = Pick<
   Note,
-  "id" | "title" | "icon" | "parent_id" | "position" | "updated_at"
+  "id" | "title" | "icon" | "type" | "parent_id" | "position" | "updated_at"
 >;
 
 // A NoteSummary with its resolved children (built client-side).

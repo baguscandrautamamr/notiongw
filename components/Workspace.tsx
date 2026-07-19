@@ -2,13 +2,21 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { NoteSummary } from "@/lib/types";
+import type { NoteSummary, PageType } from "@/lib/types";
 import { descendantIds, positionForIndex } from "@/lib/tree";
+import { defaultDatabase } from "@/lib/db-types";
 import { useTheme } from "@/lib/use-theme";
 import Sidebar from "@/components/Sidebar";
 import Editor from "@/components/Editor";
+import DatabaseView from "@/components/DatabaseView";
 
 export type MoveMode = "before" | "after" | "child";
+
+const TYPE_ICON: Record<PageType, string> = {
+  document: "📝",
+  grid: "🗂️",
+  board: "📋",
+};
 
 export default function Workspace({
   initialNotes,
@@ -29,7 +37,7 @@ export default function Workspace({
   const [creating, setCreating] = useState(false);
 
   const handleNew = useCallback(
-    async (parentId: string | null = null) => {
+    async (parentId: string | null = null, type: PageType = "document") => {
       if (creating) return;
       setCreating(true);
       try {
@@ -49,12 +57,14 @@ export default function Workspace({
           .insert({
             user_id: user.id,
             title: "",
-            icon: "📝",
+            icon: TYPE_ICON[type],
+            type,
             doc: null,
+            db: type === "document" ? null : defaultDatabase(),
             parent_id: parentId,
             position,
           })
-          .select("id, title, icon, parent_id, position, updated_at")
+          .select("id, title, icon, type, parent_id, position, updated_at")
           .single();
 
         if (!error && data) {
@@ -177,6 +187,8 @@ export default function Workspace({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const activeNote = notes.find((n) => n.id === activeId) ?? null;
+
   const sidebarProps = {
     notes,
     activeId,
@@ -226,34 +238,55 @@ export default function Workspace({
         </div>
 
         <div className="scroll-area min-h-0 flex-1 overflow-y-auto">
-          {activeId ? (
-            <Editor
-              key={activeId}
-              noteId={activeId}
-              theme={theme}
-              onMetaChange={handleMetaChange}
-              onCreateSubpage={handleNew}
-            />
+          {activeNote ? (
+            activeNote.type === "grid" || activeNote.type === "board" ? (
+              <DatabaseView
+                key={activeNote.id}
+                noteId={activeNote.id}
+                notes={notes}
+                onSelect={handleSelect}
+                onMetaChange={handleMetaChange}
+              />
+            ) : (
+              <Editor
+                key={activeNote.id}
+                noteId={activeNote.id}
+                notes={notes}
+                theme={theme}
+                onSelect={handleSelect}
+                onMetaChange={handleMetaChange}
+                onCreateSubpage={handleNew}
+              />
+            )
           ) : (
             <div className="flex h-full flex-col items-center justify-center px-6 text-center">
               <div className="text-6xl">📝</div>
               <h2 className="mt-4 text-lg font-semibold">
                 Selamat datang di BagusNote
               </h2>
-              <p className="mt-1 max-w-xs text-sm text-slate-500">
-                Buat halaman pertamamu. Ketik{" "}
-                <kbd className="rounded bg-slate-100 px-1 dark:bg-slate-800">
-                  /
-                </kbd>{" "}
-                di dalam dokumen untuk menyisipkan heading, checklist, gambar,
-                dan lainnya.
+              <p className="mt-1 max-w-sm text-sm text-slate-500">
+                Buat halaman pertamamu. Pilih jenis halaman:
               </p>
-              <button
-                onClick={() => handleNew(null)}
-                className="mt-5 rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-600"
-              >
-                ＋ Halaman baru
-              </button>
+              <div className="mt-5 flex flex-wrap justify-center gap-2">
+                <button
+                  onClick={() => handleNew(null, "document")}
+                  className="rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-600"
+                >
+                  📝 Dokumen
+                </button>
+                <button
+                  onClick={() => handleNew(null, "grid")}
+                  className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                >
+                  🗂️ Tabel (Grid)
+                </button>
+                <button
+                  onClick={() => handleNew(null, "board")}
+                  className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                >
+                  📋 Board (Kanban)
+                </button>
+              </div>
             </div>
           )}
         </div>

@@ -3,11 +3,15 @@
 Ruang kerja catatan ala **Notion / AppFlowy** (PWA) dengan:
 
 - 🗂️ **Workspace**: sidebar daftar halaman + area dokumen besar
+- 🧭 **Breadcrumb** navigasi lokasi halaman
 - 🌲 **Halaman bertingkat (folder/nested pages)** — sub-halaman tanpa batas
 - ↕️ **Drag & drop**: seret halaman untuk mengurutkan, atau jatuhkan ke atas
   halaman lain untuk menjadikannya sub-halaman
+- 🗄️ **Database page**: tipe halaman **Tabel (Grid)** & **Board (Kanban)**
+  dengan tipe kolom (Teks, Angka, Pilihan/Status, Centang, Tanggal), tambah/
+  hapus baris & kolom, drag kartu antar kolom, dan panel detail baris
 - 🖼️ **Cover image per halaman** (diunggah ke Cloudinary)
-- ✍️ **Editor blok slash `/`** (heading, checklist, bullet, kutipan, tabel,
+- ✍️ **Editor blok slash `/`** (heading, checklist, bullet, kutipan,
   gambar inline) via **BlockNote**, dengan **autosave**
 - 🌗 **Dark mode**
 - 🔐 **Autentikasi** via Supabase (email + kata sandi)
@@ -117,10 +121,19 @@ app/
   api/push/subscribe     # simpan langganan push
   api/push/send          # kirim push (VAPID) ke perangkat user
 components/
-  Workspace.tsx          # shell: sidebar + area dokumen (+ drawer mobile)
-  Sidebar.tsx            # daftar halaman, cari, baru, tema, keluar
-  Editor.tsx             # judul + ikon + editor blok, autosave
+  Workspace.tsx          # shell: sidebar + area konten (+ drawer mobile)
+  Sidebar.tsx            # daftar halaman (tree), cari, baru, tema, keluar
+  PageTree.tsx           # tree halaman + drag & drop (urut / nest)
+  NewPageButton.tsx      # menu buat halaman: Dokumen / Grid / Board
+  Breadcrumb.tsx         # jejak lokasi halaman
+  Editor.tsx             # dokumen: cover + judul + ikon + editor blok
   BlockNoteEditor.tsx    # BlockNote (slash menu) + upload Cloudinary
+  DatabaseView.tsx       # halaman database: tab Grid / Board + autosave
+  db/GridView.tsx        # tampilan tabel
+  db/BoardView.tsx       # tampilan kanban (drag antar kolom)
+  db/CellEditor.tsx      # editor sel per tipe kolom
+  db/SelectCell.tsx      # sel Pilihan + chip berwarna
+  db/RowDetail.tsx       # panel detail baris
   EmojiPicker.tsx        # pemilih ikon halaman
   NotificationBell.tsx   # aktifkan / tes notifikasi
   ServiceWorkerRegister.tsx

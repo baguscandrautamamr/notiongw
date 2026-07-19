@@ -1,7 +1,12 @@
 "use client";
 
-import { useCreateBlockNote } from "@blocknote/react";
+import {
+  useCreateBlockNote,
+  SuggestionMenuController,
+  getDefaultReactSlashMenuItems,
+} from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/ariakit";
+import { filterSuggestionItems } from "@blocknote/core";
 import type { Block, PartialBlock } from "@blocknote/core";
 import { uploadImage } from "@/lib/cloudinary";
 import "@blocknote/core/fonts/inter.css";
@@ -29,8 +34,23 @@ export default function BlockNoteEditor({
     <BlockNoteView
       editor={editor}
       theme={theme}
+      slashMenu={false}
       onChange={() => onChange(editor.document)}
       className="min-h-[50vh]"
-    />
+    >
+      {/* Custom slash menu without the confusing inline "Table" block —
+          use a Grid/Board database page instead. */}
+      <SuggestionMenuController
+        triggerCharacter="/"
+        getItems={async (query) =>
+          filterSuggestionItems(
+            getDefaultReactSlashMenuItems(editor).filter(
+              (item) => !/table/i.test(item.title)
+            ),
+            query
+          )
+        }
+      />
+    </BlockNoteView>
   );
 }

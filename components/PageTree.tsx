@@ -21,7 +21,7 @@ export default function PageTree({
   activeId: string | null;
   expanded: Set<string>;
   onSelect: (id: string) => void;
-  onNew: (parentId: string | null) => void;
+  onNew: (parentId: string | null, type?: import("@/lib/types").PageType) => void;
   onDelete: (id: string) => void;
   onMove: (dragId: string, targetId: string, mode: MoveMode) => void;
   onToggleExpand: (id: string) => void;
