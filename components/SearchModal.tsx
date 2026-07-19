@@ -57,13 +57,25 @@ export default function SearchModal({
     setLoading(true);
     let cancelled = false;
     const t = setTimeout(async () => {
-      const { data } = await supabase
+      const filter = `title.ilike.%${q}%,content.ilike.%${q}%`;
+      const primary = await supabase
         .from("notes")
         .select("id, title, icon, content")
         .is("deleted_at", null)
-        .or(`title.ilike.%${q}%,content.ilike.%${q}%`)
+        .or(filter)
         .order("updated_at", { ascending: false })
         .limit(30);
+      // Fall back without the deleted_at filter if the migration isn't applied.
+      const data = primary.error
+        ? (
+            await supabase
+              .from("notes")
+              .select("id, title, icon, content")
+              .or(filter)
+              .order("updated_at", { ascending: false })
+              .limit(30)
+          ).data
+        : primary.data;
       if (cancelled) return;
       setResults((data as Result[]) ?? []);
       setActive(0);

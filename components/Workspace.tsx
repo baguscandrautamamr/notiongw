@@ -6,8 +6,7 @@ import type { Note, NoteSummary, PageType } from "@/lib/types";
 import { descendantIds, positionForIndex } from "@/lib/tree";
 import { defaultDatabase } from "@/lib/db-types";
 import { initOfflineSync, updateNote } from "@/lib/offline-queue";
-import { blocksToPlainText } from "@/lib/blocks-text";
-import type { PartialBlock } from "@blocknote/core";
+import { getLocalFavorites, setLocalFavorite } from "@/lib/local-favorites";
 import { useTheme } from "@/lib/use-theme";
 import dynamic from "next/dynamic";
 import Sidebar from "@/components/Sidebar";
@@ -17,8 +16,10 @@ import Splash from "@/components/Splash";
 import SearchModal from "@/components/SearchModal";
 import TrashModal from "@/components/TrashModal";
 
-const SUMMARY_COLS =
-  "id, title, icon, type, parent_id, position, updated_at, is_favorite" as const;
+// Only the original columns — guaranteed to exist even before any migration.
+const BASE_COLS = "id, title, icon, type, parent_id, position, updated_at";
+// Adds is_favorite; only safe to select once the migration has been run.
+const SUMMARY_COLS = BASE_COLS + ", is_favorite";
 
 function toSummary(row: Note): NoteSummary {
   return {
@@ -78,17 +79,29 @@ export default function Workspace({
   // Re-fetch the (non-deleted) page list from the server. Used after
   // restoring/purging from the Trash.
   const refreshNotes = useCallback(async () => {
-    const { data } = await supabase
+    const primary = await supabase
       .from("notes")
       .select(SUMMARY_COLS)
       .is("deleted_at", null)
       .order("position", { ascending: true });
-    if (data) setNotes(data as NoteSummary[]);
+    // Fall back to base columns if the migration hasn't been run.
+    const rows = primary.error
+      ? (
+          await supabase
+            .from("notes")
+            .select(BASE_COLS)
+            .order("position", { ascending: true })
+        ).data
+      : primary.data;
+    if (rows) setNotes((rows as Note[]).map(toSummary));
   }, [supabase]);
 
   // Merge one row into the local summary list (add or replace).
   const upsertSummary = useCallback((row: Note) => {
     const summary = toSummary(row);
+    // Keep locally-set favorites sticky even if the server row doesn't carry
+    // the flag (column not migrated).
+    if (getLocalFavorites().has(summary.id)) summary.is_favorite = true;
     setNotes((prev) => {
       const idx = prev.findIndex((n) => n.id === summary.id);
       if (idx === -1) return [...prev, summary];
@@ -130,7 +143,7 @@ export default function Workspace({
             parent_id: parentId,
             position,
           })
-          .select(SUMMARY_COLS)
+          .select(BASE_COLS)
           .single();
 
         if (!error && data) {
@@ -141,6 +154,8 @@ export default function Workspace({
             setExpanded((prev) => new Set(prev).add(parentId));
           }
           setSidebarOpen(false);
+        } else if (error) {
+          alert("Gagal membuat halaman: " + error.message);
         }
       } finally {
         setCreating(false);
@@ -264,18 +279,14 @@ export default function Workspace({
       const current = notes.find((n) => n.id === id);
       if (!current) return;
       const next = !current.is_favorite;
+      // Persist locally first so it works even without the migration, and
+      // update the UI immediately.
+      setLocalFavorite(id, next);
       setNotes((prev) =>
         prev.map((n) => (n.id === id ? { ...n, is_favorite: next } : n))
       );
-      const { ok, queued } = await updateNote(supabase, id, {
-        is_favorite: next,
-      });
-      if (!ok && !queued) {
-        // Revert on failure (e.g. is_favorite column not migrated yet).
-        setNotes((prev) =>
-          prev.map((n) => (n.id === id ? { ...n, is_favorite: !next } : n))
-        );
-      }
+      // Best-effort sync to the server (no-op if the column doesn't exist yet).
+      await updateNote(supabase, id, { is_favorite: next });
     },
     [notes, supabase]
   );
@@ -313,49 +324,13 @@ export default function Workspace({
           parent_id: src.parent_id ?? null,
           position,
         })
-        .select(SUMMARY_COLS)
+        .select(BASE_COLS)
         .single();
 
       if (!error && data) {
         const summary = toSummary(data as Note);
         setNotes((prev) => [...prev, summary]);
         setActiveId(summary.id);
-      }
-    },
-    [notes, supabase]
-  );
-
-  const handleImportPdf = useCallback(
-    async (title: string, blocks: PartialBlock[]) => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const roots = notes.filter((n) => n.parent_id === null);
-      const position =
-        roots.length > 0 ? Math.max(...roots.map((s) => s.position)) + 1 : 0;
-
-      const { data, error } = await supabase
-        .from("notes")
-        .insert({
-          user_id: user.id,
-          title,
-          icon: "📄",
-          type: "document",
-          doc: blocks,
-          content: blocksToPlainText(blocks),
-          parent_id: null,
-          position,
-        })
-        .select(SUMMARY_COLS)
-        .single();
-
-      if (!error && data) {
-        const summary = toSummary(data as Note);
-        setNotes((prev) => [...prev, summary]);
-        setActiveId(summary.id);
-        setSidebarOpen(false);
       }
     },
     [notes, supabase]
@@ -419,6 +394,15 @@ export default function Workspace({
   // Flush offline edits when connectivity returns.
   useEffect(() => initOfflineSync(supabase), [supabase]);
 
+  // Apply per-device favorites (client-only, avoids hydration mismatch).
+  useEffect(() => {
+    const favs = getLocalFavorites();
+    if (favs.size === 0) return;
+    setNotes((prev) =>
+      prev.map((n) => (favs.has(n.id) && !n.is_favorite ? { ...n, is_favorite: true } : n))
+    );
+  }, []);
+
   // Keep the active selection valid if the current page disappears
   // (deleted here or on another device).
   useEffect(() => {
@@ -441,7 +425,6 @@ export default function Workspace({
     onMove: handleMove,
     onToggleFavorite: handleToggleFavorite,
     onDuplicate: handleDuplicate,
-    onImportPdf: handleImportPdf,
     onToggleExpand: toggleExpand,
     onToggleTheme: toggle,
     onCloseMobile: () => setSidebarOpen(false),
