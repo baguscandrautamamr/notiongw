@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Excalidraw, exportToBlob } from "@excalidraw/excalidraw";
+import { Excalidraw } from "@excalidraw/excalidraw";
 import "@excalidraw/excalidraw/index.css";
 import { createClient } from "@/lib/supabase/client";
 import { updateNote } from "@/lib/offline-queue";
@@ -9,6 +9,9 @@ import type { Note, NoteSummary } from "@/lib/types";
 import EmojiPicker from "@/components/EmojiPicker";
 import Breadcrumb from "@/components/Breadcrumb";
 import ShareButton from "@/components/ShareButton";
+import { useWhiteboardTools } from "@/components/WhiteboardTools";
+import { exportPng } from "@/lib/whiteboard-export";
+import { offloadWhiteboardImages } from "@/lib/whiteboard-files";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -43,25 +46,10 @@ export default function WhiteboardView({
   const iconRef = useRef("🎨");
   const sceneRef = useRef<Scene>({});
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const offloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const apiRef = useRef<any>(null);
 
-  async function exportPng() {
-    const api = apiRef.current;
-    if (!api) return;
-    const blob = await exportToBlob({
-      elements: api.getSceneElements(),
-      files: api.getFiles(),
-      appState: { ...api.getAppState(), exportBackground: true },
-      mimeType: "image/png",
-      quality: 1,
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${(titleRef.current || "whiteboard").trim() || "whiteboard"}.png`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
+  const { menu, modal } = useWhiteboardTools(apiRef, () => titleRef.current);
 
   useEffect(() => {
     let cancelled = false;
@@ -86,6 +74,7 @@ export default function WhiteboardView({
     return () => {
       cancelled = true;
       if (timer.current) clearTimeout(timer.current);
+      if (offloadTimer.current) clearTimeout(offloadTimer.current);
     };
   }, [noteId, supabase]);
 
@@ -115,6 +104,16 @@ export default function WhiteboardView({
     timer.current = setTimeout(persist, 900);
   }, [persist]);
 
+  // Debounced: push oversized inline (base64) images to Cloudinary so the
+  // saved scene stays light. On success it swaps the file in place, which
+  // fires onChange again and persists the URL version.
+  const scheduleOffload = useCallback(() => {
+    if (offloadTimer.current) clearTimeout(offloadTimer.current);
+    offloadTimer.current = setTimeout(() => {
+      offloadWhiteboardImages(apiRef.current).catch(() => {});
+    }, 1600);
+  }, []);
+
   const handleChange = useCallback(
     (elements: readonly any[], appState: any, files: any) => {
       sceneRef.current = {
@@ -123,8 +122,9 @@ export default function WhiteboardView({
         appState: { viewBackgroundColor: appState?.viewBackgroundColor },
       };
       scheduleSave();
+      scheduleOffload();
     },
-    [scheduleSave]
+    [scheduleSave, scheduleOffload]
   );
 
   function handleTitle(v: string) {
@@ -166,7 +166,7 @@ export default function WhiteboardView({
                 : ""}
             </span>
             <button
-              onClick={exportPng}
+              onClick={() => exportPng(apiRef.current, titleRef.current)}
               className="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
             >
               ⬇ Export PNG
@@ -215,7 +215,10 @@ export default function WhiteboardView({
             scrollToContent: true,
           }}
           onChange={handleChange}
-        />
+        >
+          {menu}
+        </Excalidraw>
+        {modal}
       </div>
     </div>
   );

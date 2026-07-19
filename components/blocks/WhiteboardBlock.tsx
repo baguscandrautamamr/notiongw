@@ -4,6 +4,7 @@ import { useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
 import { BlockNoteSchema, defaultBlockSpecs } from "@blocknote/core";
 import { createReactBlockSpec } from "@blocknote/react";
+import { offloadWhiteboardImages } from "@/lib/whiteboard-files";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -23,6 +24,8 @@ function InlineWhiteboard({ block, editor }: { block: any; editor: any }) {
   }, [block.id]);
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const offloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const apiRef = useRef<any>(null);
 
   const onChange = (elements: readonly any[], appState: any, files: any) => {
     if (timer.current) clearTimeout(timer.current);
@@ -37,6 +40,11 @@ function InlineWhiteboard({ block, editor }: { block: any; editor: any }) {
         },
       });
     }, 900);
+    // Keep embedded whiteboards light: offload big pasted images to Cloudinary.
+    if (offloadTimer.current) clearTimeout(offloadTimer.current);
+    offloadTimer.current = setTimeout(() => {
+      offloadWhiteboardImages(apiRef.current).catch(() => {});
+    }, 1600);
   };
 
   const dark =
@@ -50,6 +58,7 @@ function InlineWhiteboard({ block, editor }: { block: any; editor: any }) {
     >
       <Excalidraw
         theme={dark ? "dark" : "light"}
+        excalidrawAPI={(api: any) => (apiRef.current = api)}
         initialData={{
           elements: initial.elements ?? [],
           files: initial.files ?? {},
