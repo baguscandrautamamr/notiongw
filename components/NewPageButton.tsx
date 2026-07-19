@@ -7,6 +7,7 @@ const ITEMS: { type: PageType; icon: string; label: string }[] = [
   { type: "document", icon: "📝", label: "Dokumen" },
   { type: "grid", icon: "🗂️", label: "Tabel (Grid)" },
   { type: "board", icon: "📋", label: "Board (Kanban)" },
+  { type: "whiteboard", icon: "🎨", label: "Whiteboard" },
 ];
 
 export default function NewPageButton({

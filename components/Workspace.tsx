@@ -6,9 +6,22 @@ import type { NoteSummary, PageType } from "@/lib/types";
 import { descendantIds, positionForIndex } from "@/lib/tree";
 import { defaultDatabase } from "@/lib/db-types";
 import { useTheme } from "@/lib/use-theme";
+import dynamic from "next/dynamic";
 import Sidebar from "@/components/Sidebar";
 import Editor from "@/components/Editor";
 import DatabaseView from "@/components/DatabaseView";
+import Splash from "@/components/Splash";
+
+const WhiteboardView = dynamic(() => import("@/components/WhiteboardView"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full items-center justify-center">
+      <div className="loadbar-track h-1.5 w-28 rounded-full bg-slate-200 dark:bg-slate-800">
+        <div className="loadbar-fill" />
+      </div>
+    </div>
+  ),
+});
 
 export type MoveMode = "before" | "after" | "child";
 
@@ -16,6 +29,7 @@ const TYPE_ICON: Record<PageType, string> = {
   document: "📝",
   grid: "🗂️",
   board: "📋",
+  whiteboard: "🎨",
 };
 
 export default function Workspace({
@@ -206,6 +220,7 @@ export default function Workspace({
 
   return (
     <div className="flex h-[100dvh] overflow-hidden">
+      <Splash />
       {/* Sidebar — desktop */}
       <aside className="hidden w-72 shrink-0 border-r border-slate-200 dark:border-slate-800 md:block">
         <Sidebar {...sidebarProps} />
@@ -237,13 +252,28 @@ export default function Workspace({
           <span className="text-sm font-semibold">BagusNote</span>
         </div>
 
-        <div className="scroll-area min-h-0 flex-1 overflow-y-auto">
+        <div
+          className={`min-h-0 flex-1 ${
+            activeNote?.type === "whiteboard"
+              ? "overflow-hidden"
+              : "scroll-area overflow-y-auto"
+          }`}
+        >
           {activeNote ? (
             activeNote.type === "grid" || activeNote.type === "board" ? (
               <DatabaseView
                 key={activeNote.id}
                 noteId={activeNote.id}
                 notes={notes}
+                onSelect={handleSelect}
+                onMetaChange={handleMetaChange}
+              />
+            ) : activeNote.type === "whiteboard" ? (
+              <WhiteboardView
+                key={activeNote.id}
+                noteId={activeNote.id}
+                notes={notes}
+                theme={theme}
                 onSelect={handleSelect}
                 onMetaChange={handleMetaChange}
               />
@@ -285,6 +315,12 @@ export default function Workspace({
                   className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
                 >
                   📋 Board (Kanban)
+                </button>
+                <button
+                  onClick={() => handleNew(null, "whiteboard")}
+                  className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold transition hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                >
+                  🎨 Whiteboard
                 </button>
               </div>
             </div>

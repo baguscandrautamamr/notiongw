@@ -1,4 +1,4 @@
-export type PageType = "document" | "grid" | "board";
+export type PageType = "document" | "grid" | "board" | "whiteboard";
 
 export type Note = {
   id: string;

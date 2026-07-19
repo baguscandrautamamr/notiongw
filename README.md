@@ -4,6 +4,7 @@ Ruang kerja catatan ala **Notion / AppFlowy** (PWA) dengan:
 
 - 🗂️ **Workspace**: sidebar daftar halaman + area dokumen besar
 - 🧭 **Breadcrumb** navigasi lokasi halaman
+- 🎨 **Whiteboard** (papan gambar ala Excalidraw) sebagai tipe halaman
 - 🌲 **Halaman bertingkat (folder/nested pages)** — sub-halaman tanpa batas
 - ↕️ **Drag & drop**: seret halaman untuk mengurutkan, atau jatuhkan ke atas
   halaman lain untuk menjadikannya sub-halaman
@@ -151,7 +152,10 @@ components/
   Breadcrumb.tsx         # jejak lokasi halaman
   Editor.tsx             # dokumen: cover + judul + ikon + editor blok
   BlockNoteEditor.tsx    # BlockNote (slash menu) + upload Cloudinary
-  DatabaseView.tsx       # halaman database: tab Grid / Board + autosave
+  DatabaseView.tsx       # halaman database: tab Grid / Board / Kalender
+  WhiteboardView.tsx     # halaman whiteboard (Excalidraw) + autosave
+  Splash.tsx             # layar loading singkat saat buka aplikasi
+  db/CalendarView.tsx    # tampilan kalender
   db/GridView.tsx        # tampilan tabel
   db/BoardView.tsx       # tampilan kanban (drag antar kolom)
   db/CellEditor.tsx      # editor sel per tipe kolom
