@@ -39,6 +39,7 @@ const TYPE_DEFAULT_NAME: Record<FieldType, string> = {
   select: "Pilihan",
   checkbox: "Centang",
   date: "Tanggal",
+  progress: "Progres",
 };
 
 export function addField(db: Database, type: FieldType): Database {

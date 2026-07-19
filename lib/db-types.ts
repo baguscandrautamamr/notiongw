@@ -5,7 +5,8 @@ export type FieldType =
   | "number"
   | "select"
   | "checkbox"
-  | "date";
+  | "date"
+  | "progress";
 
 export type SelectOption = {
   id: string;
@@ -70,6 +71,7 @@ export function defaultDatabase(): Database {
           { id: uid(), name: "Done", color: "green" },
         ],
       },
+      { id: uid(), name: "Progres", type: "progress" },
       { id: uid(), name: "Selesai", type: "checkbox" },
     ],
     rows: [],

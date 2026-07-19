@@ -70,6 +70,7 @@ export default function BoardView({
     (f) => f.type === "select" && f.id !== groupField.id
   );
   const checkboxes = db.fields.filter((f) => f.type === "checkbox");
+  const progressFields = db.fields.filter((f) => f.type === "progress");
 
   const drop = (key: string | "none") => {
     if (dragRow) {
@@ -128,6 +129,28 @@ export default function BoardView({
                       className="cursor-pointer rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition hover:shadow-md dark:border-slate-700 dark:bg-slate-900"
                     >
                       <div className="mb-1 text-sm font-medium">{title}</div>
+                      {progressFields.map((f) => {
+                        const n = Math.max(
+                          0,
+                          Math.min(100, Math.round(Number(row.cells[f.id]) || 0))
+                        );
+                        return (
+                          <div
+                            key={f.id}
+                            className="mb-1.5 flex items-center gap-2"
+                          >
+                            <div className="relative h-1.5 flex-1 rounded-full bg-slate-200 dark:bg-slate-700">
+                              <div
+                                className="absolute inset-y-0 left-0 rounded-full bg-brand-500"
+                                style={{ width: `${n}%` }}
+                              />
+                            </div>
+                            <span className="text-[11px] tabular-nums text-slate-400">
+                              {n}%
+                            </span>
+                          </div>
+                        );
+                      })}
                       <div className="flex flex-wrap items-center gap-1">
                         {otherSelects.map((f) => {
                           const opt = (f.options ?? []).find(

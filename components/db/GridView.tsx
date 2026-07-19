@@ -22,6 +22,7 @@ const TYPE_META: Record<FieldType, { icon: string; label: string }> = {
   select: { icon: "◉", label: "Pilihan" },
   checkbox: { icon: "☑", label: "Centang" },
   date: { icon: "📅", label: "Tanggal" },
+  progress: { icon: "▰", label: "Progres" },
 };
 
 type Update = (fn: (db: Database) => Database) => void;
@@ -113,7 +114,14 @@ function AddColumn({ update }: { update: Update }) {
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  const types: FieldType[] = ["text", "number", "select", "checkbox", "date"];
+  const types: FieldType[] = [
+    "text",
+    "number",
+    "select",
+    "checkbox",
+    "date",
+    "progress",
+  ];
   return (
     <div ref={ref} className="relative">
       <button

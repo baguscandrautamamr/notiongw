@@ -13,6 +13,7 @@ const TYPE_ICON: Record<string, string> = {
   select: "◉",
   checkbox: "☑",
   date: "📅",
+  progress: "▰",
 };
 
 export default function RowDetail({
