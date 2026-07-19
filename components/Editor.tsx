@@ -225,7 +225,7 @@ export default function Editor({
               ? "Tersimpan ✓"
               : ""}
           </span>
-          <div className="flex gap-1 opacity-0 transition group-hover/page:opacity-100">
+          <div className="flex gap-1 opacity-0 transition group-hover/page:opacity-100 [@media(hover:none)]:opacity-100">
             {!cover && (
               <button
                 onClick={() => coverInput.current?.click()}

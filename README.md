@@ -5,7 +5,17 @@ Ruang kerja catatan ala **Notion / AppFlowy** (PWA) dengan:
 - 🗂️ **Workspace**: sidebar daftar halaman + area dokumen besar
 - 🧭 **Breadcrumb** navigasi lokasi halaman
 - 🎨 **Whiteboard** (papan gambar ala Excalidraw) sebagai tipe halaman —
-  bisa **di-embed ke dalam dokumen** (ketik `/papan`) dan **export ke PNG**
+  bisa **di-embed ke dalam dokumen** (ketik `/papan`) dan **export PNG/SVG**
+  atau **salin ke clipboard**. Lewat menu Excalidraw (☰) tersedia:
+  - ⚡ **Simbol MEP / Listrik** — pustaka simbol single-line-diagram (panel/DB,
+    MCB, MCCB, ATS, trafo, generator, motor, busbar, grounding, dll) untuk
+    sketsa SLD langsung di kanvas
+  - 📊 **Teks → Diagram** — ketik sintaks **Mermaid** (flowchart) dan otomatis
+    jadi elemen Excalidraw yang bisa diedit
+  - 🗂️ **Template starter** — Flowchart, Mind map, & Checklist board
+  - 🖼️ Gambar besar yang di-paste ke whiteboard otomatis **di-offload ke
+    Cloudinary** (bukan base64 inline) supaya row Supabase tetap ramping &
+    autosave cepat
 - 👤 **Penanggung jawab (assignee)** dengan foto/avatar di database
 - 🌐 **Share halaman via link publik** (baca-saja, tanpa perlu login)
 - ⭐ **Favorit** & 🕒 **Terkini** di sidebar untuk akses cepat
