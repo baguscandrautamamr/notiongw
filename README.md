@@ -8,6 +8,12 @@ Ruang kerja catatan ala **Notion / AppFlowy** (PWA) dengan:
   bisa **di-embed ke dalam dokumen** (ketik `/papan`) dan **export ke PNG**
 - 👤 **Penanggung jawab (assignee)** dengan foto/avatar di database
 - 🌐 **Share halaman via link publik** (baca-saja, tanpa perlu login)
+- 🔎 **Pencarian full-text** (judul **dan** isi semua halaman) — tekan `⌘K` / `Ctrl+K`
+- 🗑️ **Sampah (soft-delete)**: halaman yang dihapus bisa **dipulihkan** atau
+  dihapus permanen — tidak langsung hilang
+- 🔄 **Sinkron realtime** antar perangkat/tab (Supabase Realtime)
+- 📴 **Tetap bisa mengedit saat offline** — perubahan diantre lokal &
+  otomatis tersimpan begitu koneksi kembali
 - 🌲 **Halaman bertingkat (folder/nested pages)** — sub-halaman tanpa batas
 - ↕️ **Drag & drop**: seret halaman untuk mengurutkan, atau jatuhkan ke atas
   halaman lain untuk menjadikannya sub-halaman
@@ -72,6 +78,9 @@ npm run gen:vapid
 1. Buka proyek di [Supabase Dashboard](https://supabase.com/dashboard).
 2. **SQL Editor** → tempel isi file [`supabase-schema.sql`](./supabase-schema.sql) → **Run**.
    Ini membuat tabel `notes` dan `push_subscriptions` lengkap dengan RLS.
+   Skrip ini **idempoten** — aman dijalankan ulang untuk instalasi lama; ia
+   menambah kolom `deleted_at` (Sampah) dan mendaftarkan tabel `notes` ke
+   publication realtime supaya sinkron antar perangkat aktif.
 3. **Authentication → Providers → Email**: pastikan aktif.
    - Untuk testing cepat, matikan "Confirm email" agar bisa langsung masuk
      setelah daftar. Untuk produksi, biarkan aktif.
@@ -148,8 +157,10 @@ app/
   api/push/subscribe     # simpan langganan push
   api/push/send          # kirim push (VAPID) ke perangkat user
 components/
-  Workspace.tsx          # shell: sidebar + area konten (+ drawer mobile)
-  Sidebar.tsx            # daftar halaman (tree), cari, baru, tema, keluar
+  Workspace.tsx          # shell: sidebar + konten + realtime + offline sync
+  Sidebar.tsx            # daftar halaman (tree), cari, baru, tema, sampah, keluar
+  SearchModal.tsx        # pencarian full-text (judul + isi) via ⌘K
+  TrashModal.tsx         # Sampah: pulihkan / hapus permanen
   PageTree.tsx           # tree halaman + drag & drop (urut / nest)
   NewPageButton.tsx      # menu buat halaman: Dokumen / Grid / Board
   Breadcrumb.tsx         # jejak lokasi halaman
@@ -171,6 +182,8 @@ lib/
   supabase/              # client, server, middleware
   cloudinary.ts          # unsigned upload
   push-client.ts         # helper Web Push di browser
+  offline-queue.ts       # antrean tulis offline (localStorage) + auto-flush
+  blocks-text.ts         # ekstrak teks BlockNote → indeks pencarian
   use-theme.ts           # hook dark mode
   types.ts               # tipe Note
 public/

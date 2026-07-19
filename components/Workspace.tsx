@@ -2,15 +2,33 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { NoteSummary, PageType } from "@/lib/types";
+import type { Note, NoteSummary, PageType } from "@/lib/types";
 import { descendantIds, positionForIndex } from "@/lib/tree";
 import { defaultDatabase } from "@/lib/db-types";
+import { initOfflineSync } from "@/lib/offline-queue";
 import { useTheme } from "@/lib/use-theme";
 import dynamic from "next/dynamic";
 import Sidebar from "@/components/Sidebar";
 import Editor from "@/components/Editor";
 import DatabaseView from "@/components/DatabaseView";
 import Splash from "@/components/Splash";
+import SearchModal from "@/components/SearchModal";
+import TrashModal from "@/components/TrashModal";
+
+const SUMMARY_COLS =
+  "id, title, icon, type, parent_id, position, updated_at" as const;
+
+function toSummary(row: Note): NoteSummary {
+  return {
+    id: row.id,
+    title: row.title,
+    icon: row.icon,
+    type: row.type,
+    parent_id: row.parent_id,
+    position: row.position,
+    updated_at: row.updated_at,
+  };
+}
 
 const WhiteboardView = dynamic(() => import("@/components/WhiteboardView"), {
   ssr: false,
@@ -35,9 +53,11 @@ const TYPE_ICON: Record<PageType, string> = {
 export default function Workspace({
   initialNotes,
   userEmail,
+  userId,
 }: {
   initialNotes: NoteSummary[];
   userEmail: string;
+  userId: string;
 }) {
   const supabase = createClient();
   const { theme, toggle } = useTheme();
@@ -49,6 +69,35 @@ export default function Workspace({
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [trashOpen, setTrashOpen] = useState(false);
+
+  // Re-fetch the (non-deleted) page list from the server. Used after
+  // restoring/purging from the Trash.
+  const refreshNotes = useCallback(async () => {
+    const { data } = await supabase
+      .from("notes")
+      .select(SUMMARY_COLS)
+      .is("deleted_at", null)
+      .order("position", { ascending: true });
+    if (data) setNotes(data as NoteSummary[]);
+  }, [supabase]);
+
+  // Merge one row into the local summary list (add or replace).
+  const upsertSummary = useCallback((row: Note) => {
+    const summary = toSummary(row);
+    setNotes((prev) => {
+      const idx = prev.findIndex((n) => n.id === summary.id);
+      if (idx === -1) return [...prev, summary];
+      const next = [...prev];
+      next[idx] = summary;
+      return next;
+    });
+  }, []);
+
+  const removeLocal = useCallback((id: string) => {
+    setNotes((prev) => prev.filter((n) => n.id !== id));
+  }, []);
 
   const handleNew = useCallback(
     async (parentId: string | null = null, type: PageType = "document") => {
@@ -99,7 +148,8 @@ export default function Workspace({
 
   const handleDelete = useCallback(
     async (id: string) => {
-      if (!confirm("Hapus halaman ini beserta sub-halamannya?")) return;
+      if (!confirm("Pindahkan halaman ini (beserta sub-halamannya) ke Sampah?"))
+        return;
       const toRemove = new Set<string>([id, ...descendantIds(notes, id)]);
       const prev = notes;
       const remaining = notes.filter((n) => !toRemove.has(n.id));
@@ -108,8 +158,11 @@ export default function Workspace({
         setActiveId(remaining[0]?.id ?? null);
       }
 
-      // FK "on delete cascade" removes descendants server-side too.
-      const { error } = await supabase.from("notes").delete().eq("id", id);
+      // Soft-delete: flag the whole subtree so it can be restored from Trash.
+      const { error } = await supabase
+        .from("notes")
+        .update({ deleted_at: new Date().toISOString() })
+        .in("id", [...toRemove]);
       if (error) setNotes(prev);
     },
     [notes, activeId, supabase]
@@ -196,10 +249,54 @@ export default function Workspace({
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setSidebarOpen(false);
+      // Cmd/Ctrl+K opens global full-text search.
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  // Live sync across devices/tabs via Supabase Realtime.
+  useEffect(() => {
+    const channel = supabase
+      .channel(`notes:${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "notes",
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            removeLocal((payload.old as { id: string }).id);
+            return;
+          }
+          const row = payload.new as Note;
+          if (row.deleted_at) removeLocal(row.id);
+          else upsertSummary(row);
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase, userId, upsertSummary, removeLocal]);
+
+  // Flush offline edits when connectivity returns.
+  useEffect(() => initOfflineSync(supabase), [supabase]);
+
+  // Keep the active selection valid if the current page disappears
+  // (deleted here or on another device).
+  useEffect(() => {
+    if (activeId && !notes.some((n) => n.id === activeId)) {
+      setActiveId(notes[0]?.id ?? null);
+    }
+  }, [notes, activeId]);
 
   const activeNote = notes.find((n) => n.id === activeId) ?? null;
 
@@ -216,11 +313,25 @@ export default function Workspace({
     onToggleExpand: toggleExpand,
     onToggleTheme: toggle,
     onCloseMobile: () => setSidebarOpen(false),
+    onOpenSearch: () => setSearchOpen(true),
+    onOpenTrash: () => setTrashOpen(true),
   };
 
   return (
     <div className="flex h-[100dvh] overflow-hidden">
       <Splash />
+      {searchOpen && (
+        <SearchModal
+          onSelect={handleSelect}
+          onClose={() => setSearchOpen(false)}
+        />
+      )}
+      {trashOpen && (
+        <TrashModal
+          onClose={() => setTrashOpen(false)}
+          onChanged={refreshNotes}
+        />
+      )}
       {/* Sidebar — desktop */}
       <aside className="hidden w-72 shrink-0 border-r border-slate-200 dark:border-slate-800 md:block">
         <Sidebar {...sidebarProps} />

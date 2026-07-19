@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { updateNote } from "@/lib/offline-queue";
 import type { Note, NoteSummary } from "@/lib/types";
 import {
   type Database,
@@ -77,16 +78,13 @@ export default function DatabaseView({
 
   const persist = useCallback(async () => {
     setStatus("saving");
-    const { error } = await supabase
-      .from("notes")
-      .update({
-        title: titleRef.current.trim(),
-        icon: iconRef.current,
-        db: dbRef.current,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", noteId);
-    if (!error) {
+    const { ok, queued } = await updateNote(supabase, noteId, {
+      title: titleRef.current.trim(),
+      icon: iconRef.current,
+      db: dbRef.current,
+      updated_at: new Date().toISOString(),
+    });
+    if (ok || queued) {
       setStatus("saved");
       onMetaChange({
         id: noteId,
